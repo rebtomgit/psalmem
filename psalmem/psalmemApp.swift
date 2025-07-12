@@ -12,7 +12,13 @@ import SwiftData
 struct psalmemApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            User.self,
+            Psalm.self,
+            Verse.self,
+            Translation.self,
+            MemoryTest.self,
+            Progress.self,
+            Item.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -25,7 +31,7 @@ struct psalmemApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainNavigationView()
         }
         .modelContainer(sharedModelContainer)
     }
