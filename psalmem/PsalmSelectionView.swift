@@ -5,18 +5,39 @@ struct PsalmSelectionView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var psalms: [Psalm]
     @State private var selectedPsalm: Psalm?
+    @State private var selectedTranslation: String?
+    @State private var showMemorization = false
     
     var body: some View {
         VStack {
             PsalmSelectionHeaderView()
-            PsalmSelectionListView(psalms: Array(psalms.prefix(20)), selectedPsalm: selectedPsalm, onSelect: { selectedPsalm = $0 })
-            if let selectedPsalm = selectedPsalm {
-                PsalmTranslationSectionView(psalm: selectedPsalm)
+            if psalms.isEmpty {
+                Text("No psalms available. Please add psalms to the database.")
+                    .foregroundColor(.red)
+                    .padding()
+            } else {
+                PsalmSelectionListView(psalms: Array(psalms.prefix(20)), selectedPsalm: selectedPsalm, onSelect: { selectedPsalm = $0 })
+                if let selectedPsalm = selectedPsalm {
+                    PsalmTranslationSectionView(selectedTranslation: $selectedTranslation)
+                }
+                if let selectedPsalm = selectedPsalm, let selectedTranslation = selectedTranslation {
+                    Button("Start Memorization") {
+                        showMemorization = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding()
+                }
             }
         }
 #if os(iOS)
         .navigationBarTitleDisplayMode(.large)
 #endif
+        .sheet(isPresented: $showMemorization) {
+            if let selectedPsalm = selectedPsalm, let selectedTranslation = selectedTranslation {
+                // Replace with your actual MemorizationView
+                Text("Memorization for Psalm \(selectedPsalm.number) - \(selectedTranslation)")
+            }
+        }
     }
 }
 
@@ -44,12 +65,12 @@ struct PsalmSelectionListView: View {
 }
 
 struct PsalmTranslationSectionView: View {
-    let psalm: Psalm
+    @Binding var selectedTranslation: String?
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Choose Translation")
                 .font(.headline)
-            TranslationButtonRowView()
+            TranslationButtonRowView(selectedTranslation: $selectedTranslation)
         }
         .padding(.vertical)
     }
@@ -75,19 +96,20 @@ struct PsalmRowView: View {
 }
 
 struct TranslationButtonRowView: View {
+    @Binding var selectedTranslation: String?
     var body: some View {
         HStack(spacing: 10) {
             Button("King James") {
-                // handle selection
+                selectedTranslation = "King James"
             }
             .padding()
-            .background(Color.gray.opacity(0.2))
+            .background(selectedTranslation == "King James" ? Color.blue.opacity(0.2) : Color.gray.opacity(0.2))
             .cornerRadius(8)
             Button("English Standard") {
-                // handle selection
+                selectedTranslation = "English Standard"
             }
             .padding()
-            .background(Color.gray.opacity(0.2))
+            .background(selectedTranslation == "English Standard" ? Color.blue.opacity(0.2) : Color.gray.opacity(0.2))
             .cornerRadius(8)
         }
     }

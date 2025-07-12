@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import AVFoundation
 
 struct MemoryAssessmentView: View {
     @Environment(\.modelContext) private var modelContext
@@ -184,43 +185,46 @@ struct MemoryAssessmentView: View {
 
 struct VisualMemoryTest: View {
     let onComplete: (Double) -> Void
-    @State private var showingPattern = false
+    @State private var testPhase: TestPhase = .instructions
     @State private var userPattern: [Int] = []
     @State private var correctPattern = [1, 3, 2, 4]
     @State private var currentStep = 0
+    @State private var showingPattern = false
+    
+    enum TestPhase {
+        case instructions, showing, replicating
+    }
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Remember the pattern shown below")
-                .font(.headline)
-            
-            if showingPattern {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 20) {
-                    ForEach(1...4, id: \.self) { number in
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(correctPattern[currentStep] == number ? Color.blue : Color.gray)
-                            .frame(height: 60)
-                            .overlay(
-                                Text("\(number)")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                            )
+            switch testPhase {
+            case .instructions:
+                VStack(spacing: 15) {
+                    Text("Visual Memory Test")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("You will see a pattern of highlighted squares appear one by one. Remember the order, then tap the squares in the same sequence.")
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
+                    Button("Start Test") {
+                        testPhase = .showing
+                        startPattern()
                     }
+                    .buttonStyle(.borderedProminent)
                 }
-                .padding()
-            } else {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 20) {
-                    ForEach(1...4, id: \.self) { number in
-                        Button(action: {
-                            userPattern.append(number)
-                            if userPattern.count == correctPattern.count {
-                                let score = calculateScore()
-                                onComplete(score)
-                            }
-                        }) {
+                
+            case .showing:
+                VStack(spacing: 15) {
+                    Text("Watch the pattern carefully...")
+                        .font(.headline)
+                    
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 20) {
+                        ForEach(1...4, id: \.self) { number in
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.gray)
+                                .fill(showingPattern && correctPattern[currentStep] == number ? Color.blue : Color.gray)
                                 .frame(height: 60)
                                 .overlay(
                                     Text("\(number)")
@@ -230,23 +234,58 @@ struct VisualMemoryTest: View {
                                 )
                         }
                     }
+                    .padding()
                 }
-                .padding()
+                
+            case .replicating:
+                VStack(spacing: 15) {
+                    Text("Now tap the squares in the same order:")
+                        .font(.headline)
+                    
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 20) {
+                        ForEach(1...4, id: \.self) { number in
+                            Button(action: {
+                                userPattern.append(number)
+                                if userPattern.count == correctPattern.count {
+                                    let score = calculateScore()
+                                    onComplete(score)
+                                }
+                            }) {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.gray)
+                                    .frame(height: 60)
+                                    .overlay(
+                                        Text("\(number)")
+                                            .font(.title2)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                    )
+                            }
+                        }
+                    }
+                    .padding()
+                    
+                    Text("Your pattern: \(userPattern.map(String.init).joined(separator: "-"))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
         }
-        .onAppear {
-            startPattern()
-        }
+        .padding()
     }
     
     private func startPattern() {
-        showingPattern = true
+        currentStep = 0
         Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
-            if currentStep < correctPattern.count - 1 {
-                currentStep += 1
+            if currentStep < correctPattern.count {
+                showingPattern = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    showingPattern = false
+                    currentStep += 1
+                }
             } else {
                 timer.invalidate()
-                showingPattern = false
+                testPhase = .replicating
             }
         }
     }
@@ -264,90 +303,177 @@ struct VisualMemoryTest: View {
 
 struct AuditoryMemoryTest: View {
     let onComplete: (Double) -> Void
-    @State private var showingInstructions = true
+    @State private var testPhase: TestPhase = .instructions
     @State private var userInput = ""
     @State private var correctSequence = "3-7-1-9"
+    @State private var audioPlayer: AVAudioPlayer?
+    
+    enum TestPhase {
+        case instructions, playing, input
+    }
     
     var body: some View {
         VStack(spacing: 20) {
-            if showingInstructions {
-                Text("Listen to the number sequence and repeat it")
-                    .font(.headline)
-                
-                Button("Play Sequence") {
-                    // In a real app, this would play audio
-                    showingInstructions = false
+            switch testPhase {
+            case .instructions:
+                VStack(spacing: 15) {
+                    Text("Auditory Memory Test")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("You will hear a sequence of numbers. Listen carefully and remember the order, then enter the numbers you heard.")
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
+                    Button("Play Sequence") {
+                        testPhase = .playing
+                        playSequence()
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .buttonStyle(.borderedProminent)
-            } else {
-                Text("Enter the sequence you heard:")
-                    .font(.headline)
                 
-                TextField("e.g., 3-7-1-9", text: $userInput)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding(.horizontal)
-                
-                Button("Submit") {
-                    let score = userInput == correctSequence ? 1.0 : 0.0
-                    onComplete(score)
+            case .playing:
+                VStack(spacing: 15) {
+                    Text("Listening to sequence...")
+                        .font(.headline)
+                    
+                    ProgressView()
+                        .scaleEffect(1.5)
+                    
+                    Text("Make sure your device volume is turned on")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(userInput.isEmpty)
+                
+            case .input:
+                VStack(spacing: 15) {
+                    Text("Enter the sequence you heard:")
+                        .font(.headline)
+                    
+                    TextField("e.g., 3-7-1-9", text: $userInput)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
+#if os(iOS)
+                        .keyboardType(.numberPad)
+#endif
+                    
+                    Text("Format: numbers separated by hyphens")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Button("Submit") {
+                        let score = userInput == correctSequence ? 1.0 : 0.0
+                        onComplete(score)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(userInput.isEmpty)
+                }
             }
         }
         .padding()
+    }
+    
+    private func playSequence() {
+        // Create audio sequence using system sounds
+        let numbers = correctSequence.components(separatedBy: "-")
+        var delay: TimeInterval = 0
+        
+        for (_, number) in numbers.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                // Use system sound for number
+                AudioServicesPlaySystemSound(1103) // System sound
+                
+                // Also speak the number
+                let utterance = AVSpeechUtterance(string: number)
+                utterance.rate = 0.5
+                utterance.volume = 1.0
+                let synthesizer = AVSpeechSynthesizer()
+                synthesizer.speak(utterance)
+            }
+            delay += 1.5 // 1.5 seconds between numbers
+        }
+        
+        // Switch to input phase after sequence
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            testPhase = .input
+        }
     }
 }
 
 struct PatternMemoryTest: View {
     let onComplete: (Double) -> Void
+    @State private var testPhase: TestPhase = .instructions
     @State private var showingPattern = false
-    @State private var userPattern: [Int] = []
     @State private var correctPattern = [1, 2, 4, 8, 16]
+    
+    enum TestPhase {
+        case instructions, showing, answering
+    }
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Find the pattern in this sequence")
-                .font(.headline)
-            
-            if showingPattern {
-                HStack {
-                    ForEach(correctPattern, id: \.self) { number in
-                        Text("\(number)")
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
+            switch testPhase {
+            case .instructions:
+                VStack(spacing: 15) {
+                    Text("Pattern Recognition Test")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("Look at the sequence of numbers and identify the pattern. Then choose what number comes next in the sequence.")
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
+                    Button("Show Sequence") {
+                        testPhase = .showing
+                        showingPattern = true
                     }
+                    .buttonStyle(.borderedProminent)
                 }
-                .padding()
                 
-                Text("What comes next?")
-                    .font(.headline)
-                
-                HStack {
-                    ForEach([16, 32, 64, 128], id: \.self) { option in
-                        Button(action: {
-                            let score = option == 32 ? 1.0 : 0.0
-                            onComplete(score)
-                        }) {
-                            Text("\(option)")
-                                .font(.title2)
+            case .showing:
+                VStack(spacing: 15) {
+                    Text("Study this sequence:")
+                        .font(.headline)
+                    
+                    HStack {
+                        ForEach(correctPattern, id: \.self) { number in
+                            Text("\(number)")
+                                .font(.title)
                                 .fontWeight(.bold)
                                 .padding()
-                                .background(Color.gray)
+                                .background(Color.blue)
                                 .foregroundColor(.white)
                                 .cornerRadius(10)
                         }
                     }
+                    .padding()
+                    
+                    Text("What comes next?")
+                        .font(.headline)
+                    
+                    HStack {
+                        ForEach([16, 32, 64, 128], id: \.self) { option in
+                            Button(action: {
+                                let score = option == 32 ? 1.0 : 0.0
+                                onComplete(score)
+                            }) {
+                                Text("\(option)")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .padding()
+                                    .background(Color.gray)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                            }
+                        }
+                    }
                 }
-            } else {
-                Button("Show Pattern") {
-                    showingPattern = true
-                }
-                .buttonStyle(.borderedProminent)
+                
+            case .answering:
+                // This case is handled in the showing case
+                EmptyView()
             }
         }
         .padding()
@@ -356,52 +482,96 @@ struct PatternMemoryTest: View {
 
 struct SequenceMemoryTest: View {
     let onComplete: (Double) -> Void
-    @State private var showingSequence = false
+    @State private var testPhase: TestPhase = .instructions
     @State private var userSequence: [String] = []
     @State private var correctSequence = ["Red", "Blue", "Green", "Yellow"]
+    @State private var showingSequence = false
+    
+    enum TestPhase {
+        case instructions, showing, replicating
+    }
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Remember the color sequence")
-                .font(.headline)
-            
-            if showingSequence {
-                VStack {
-                    ForEach(correctSequence, id: \.self) { color in
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(colorFromString(color))
-                            .frame(height: 40)
-                            .padding(.horizontal)
+            switch testPhase {
+            case .instructions:
+                VStack(spacing: 15) {
+                    Text("Color Sequence Memory Test")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("You will see a sequence of colored squares appear one by one. Remember the order, then tap the colors in the same sequence.")
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
+                    Button("Start Test") {
+                        testPhase = .showing
+                        startSequence()
                     }
+                    .buttonStyle(.borderedProminent)
                 }
-                .padding()
                 
-                Text("Repeat the sequence:")
-                    .font(.headline)
-                
-                HStack {
-                    ForEach(["Red", "Blue", "Green", "Yellow"], id: \.self) { color in
-                        Button(action: {
-                            userSequence.append(color)
-                            if userSequence.count == correctSequence.count {
-                                let score = calculateScore()
-                                onComplete(score)
-                            }
-                        }) {
+            case .showing:
+                VStack(spacing: 15) {
+                    Text("Watch the color sequence...")
+                        .font(.headline)
+                    
+                    VStack {
+                        ForEach(correctSequence, id: \.self) { color in
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(colorFromString(color))
-                                .frame(width: 60, height: 40)
+                                .fill(showingSequence ? colorFromString(color) : Color.gray)
+                                .frame(height: 40)
+                                .padding(.horizontal)
                         }
                     }
+                    .padding()
                 }
-            } else {
-                Button("Show Sequence") {
-                    showingSequence = true
+                
+            case .replicating:
+                VStack(spacing: 15) {
+                    Text("Now tap the colors in the same order:")
+                        .font(.headline)
+                    
+                    HStack {
+                        ForEach(["Red", "Blue", "Green", "Yellow"], id: \.self) { color in
+                            Button(action: {
+                                userSequence.append(color)
+                                if userSequence.count == correctSequence.count {
+                                    let score = calculateScore()
+                                    onComplete(score)
+                                }
+                            }) {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(colorFromString(color))
+                                    .frame(width: 60, height: 40)
+                            }
+                        }
+                    }
+                    
+                    Text("Your sequence: \(userSequence.joined(separator: "-"))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                .buttonStyle(.borderedProminent)
             }
         }
         .padding()
+    }
+    
+    private func startSequence() {
+        var currentIndex = 0
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+            if currentIndex < correctSequence.count {
+                showingSequence = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    showingSequence = false
+                    currentIndex += 1
+                }
+            } else {
+                timer.invalidate()
+                testPhase = .replicating
+            }
+        }
     }
     
     private func colorFromString(_ color: String) -> Color {
@@ -427,52 +597,85 @@ struct SequenceMemoryTest: View {
 
 struct SpatialMemoryTest: View {
     let onComplete: (Double) -> Void
-    @State private var showingGrid = false
+    @State private var testPhase: TestPhase = .instructions
     @State private var userClicks: Set<Int> = []
     @State private var correctPositions: Set<Int> = [1, 5, 9, 13]
+    @State private var showingGrid = false
+    
+    enum TestPhase {
+        case instructions, showing, replicating
+    }
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Remember the highlighted positions")
-                .font(.headline)
-            
-            if showingGrid {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 10) {
-                    ForEach(1...16, id: \.self) { position in
-                        Button(action: {
-                            if userClicks.contains(position) {
-                                userClicks.remove(position)
-                            } else {
-                                userClicks.insert(position)
-                            }
-                        }) {
+            switch testPhase {
+            case .instructions:
+                VStack(spacing: 15) {
+                    Text("Spatial Memory Test")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("You will see a grid with some squares highlighted. Remember their positions, then tap the same squares when the grid is blank.")
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
+                    Button("Show Grid") {
+                        testPhase = .showing
+                        showingGrid = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                
+            case .showing:
+                VStack(spacing: 15) {
+                    Text("Remember the highlighted positions...")
+                        .font(.headline)
+                    
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 10) {
+                        ForEach(1...16, id: \.self) { position in
                             RoundedRectangle(cornerRadius: 8)
                                 .fill(correctPositions.contains(position) ? Color.blue : Color.gray)
                                 .frame(height: 50)
                         }
                     }
-                }
-                .padding()
-                
-                Button("Submit") {
-                    let score = calculateScore()
-                    onComplete(score)
-                }
-                .buttonStyle(.borderedProminent)
-            } else {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 10) {
-                    ForEach(1...16, id: \.self) { position in
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(correctPositions.contains(position) ? Color.blue : Color.gray)
-                            .frame(height: 50)
+                    .padding()
+                    
+                    Button("Continue") {
+                        testPhase = .replicating
+                        showingGrid = false
                     }
+                    .buttonStyle(.borderedProminent)
                 }
-                .padding()
                 
-                Button("Show Grid") {
-                    showingGrid = true
+            case .replicating:
+                VStack(spacing: 15) {
+                    Text("Now tap the squares you remember:")
+                        .font(.headline)
+                    
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 10) {
+                        ForEach(1...16, id: \.self) { position in
+                            Button(action: {
+                                if userClicks.contains(position) {
+                                    userClicks.remove(position)
+                                } else {
+                                    userClicks.insert(position)
+                                }
+                            }) {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(userClicks.contains(position) ? Color.blue : Color.gray)
+                                    .frame(height: 50)
+                            }
+                        }
+                    }
+                    .padding()
+                    
+                    Button("Submit") {
+                        let score = calculateScore()
+                        onComplete(score)
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .buttonStyle(.borderedProminent)
             }
         }
         .padding()
