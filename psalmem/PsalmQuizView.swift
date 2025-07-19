@@ -702,7 +702,8 @@ struct WordOrderQuizView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack {
+            // Main content
             ScrollView {
                 VStack(spacing: 8) {
                     selectedWordsSection
@@ -716,62 +717,74 @@ struct WordOrderQuizView: View {
                     
                     // Extra padding to ensure submit button is visible
                     Spacer(minLength: 20)
+                    
+                    // Add extra space when feedback is showing to prevent overlap
+                    if showingResult {
+                        Spacer(minLength: 200)
+                    }
                 }
                 .padding(.vertical, 6)
                 .padding(.bottom, 12)
             }
             .frame(maxHeight: .infinity)
             
-            // Feedback overlay at the very bottom
-            if showingResult {
-                VStack(spacing: 12) {
-                    HStack {
-                        Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundColor(isCorrect ? .green : .red)
-                            .font(.title2)
+            // Feedback overlay positioned at bottom
+            VStack {
+                Spacer()
+                
+                if showingResult {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .foregroundColor(isCorrect ? .green : .red)
+                                .font(.title2)
+                            
+                            Text(isCorrect ? "Correct!" : "Incorrect")
+                                .font(.headline)
+                                .foregroundColor(isCorrect ? .green : .red)
+                            
+                            Spacer()
+                        }
                         
-                        Text(isCorrect ? "Correct!" : "Incorrect")
-                            .font(.headline)
-                            .foregroundColor(isCorrect ? .green : .red)
+                        if !isCorrect {
+                            Text("The correct order was:")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            ScrollView {
+                                Text(question.correctAnswer)
+                                    .font(.body)
+                                    .fontWeight(.medium)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.green.opacity(0.1))
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                                    )
+                            }
+                            .frame(maxHeight: 100)
+                        }
                         
-                        Spacer()
+                        Button("Continue") {
+                            showingResult = false
+                            onAnswer(isCorrect)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .frame(maxWidth: .infinity)
                     }
-                    
-                    if !isCorrect {
-                        Text("The correct order was:")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        Text(question.correctAnswer)
-                            .font(.body)
-                            .fontWeight(.medium)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.green.opacity(0.1))
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.green.opacity(0.3), lineWidth: 1)
-                            )
-                    }
-                    
-                    Button("Continue") {
-                        showingResult = false
-                        onAnswer(isCorrect)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                    .shadow(radius: 10)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 20)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.3), value: showingResult)
                 }
-                .padding()
-                .background(Color(.systemBackground))
-                .cornerRadius(12)
-                .shadow(radius: 10)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 20)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.easeInOut(duration: 0.3), value: showingResult)
             }
         }
         .onAppear {
