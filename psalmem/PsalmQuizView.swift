@@ -33,7 +33,7 @@ struct PsalmQuizView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
+            VStack(spacing: 15) {
                 if showingQuizTypeSelection {
                     quizTypeSelectionView
                 } else if quizCompleted {
@@ -42,7 +42,7 @@ struct PsalmQuizView: View {
                     quizView
                 }
             }
-            .padding()
+            .padding(.horizontal)
             .navigationTitle("Psalm \(psalm.number) Quiz")
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -109,9 +109,9 @@ struct PsalmQuizView: View {
     }
     
     private var quizView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 15) {
             // Progress header
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
                 HStack {
                     Text("Question \(currentQuizIndex + 1) of \(totalQuestions)")
                         .font(.headline)
@@ -136,8 +136,6 @@ struct PsalmQuizView: View {
                     onAnswer: handleAnswer
                 )
             }
-            
-            Spacer()
         }
     }
     
@@ -486,7 +484,7 @@ struct QuizQuestionView: View {
     let onAnswer: (Bool) -> Void
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 15) {
             Text(question.question)
                 .font(.headline)
                 .multilineTextAlignment(.center)
@@ -556,9 +554,9 @@ struct WordOrderQuizView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 15) {
                 // Selected words
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     Text("Your answer:")
                         .font(.headline)
                         .foregroundColor(.primary)
@@ -572,7 +570,7 @@ struct WordOrderQuizView: View {
                             .background(Color.gray.opacity(0.1))
                             .cornerRadius(10)
                     } else {
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
                             ForEach(selectedWords, id: \.id) { item in
                                 Button(action: {
                                     // Remove word from selected and put back in available
@@ -589,8 +587,8 @@ struct WordOrderQuizView: View {
                                             .font(.caption)
                                             .foregroundColor(.white.opacity(0.8))
                                     }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
                                     .background(Color.blue)
                                     .foregroundColor(.white)
                                     .cornerRadius(8)
@@ -605,12 +603,12 @@ struct WordOrderQuizView: View {
                 .cornerRadius(12)
                 
                 // Available words
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     Text("Available words:")
                         .font(.headline)
                         .foregroundColor(.primary)
                     
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
                         ForEach(availableWords, id: \.id) { item in
                             Button(action: {
                                 if let index = availableWords.firstIndex(where: { $0.id == item.id }) {
@@ -621,8 +619,8 @@ struct WordOrderQuizView: View {
                                 Text(item.word)
                                     .font(.body)
                                     .fontWeight(.medium)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
                                     .background(Color.gray)
                                     .foregroundColor(.white)
                                     .cornerRadius(8)
@@ -636,7 +634,7 @@ struct WordOrderQuizView: View {
                 .cornerRadius(12)
                 
                 // Action buttons
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     HStack(spacing: 15) {
                         Button("Clear All") {
                             availableWords.append(contentsOf: selectedWords)
@@ -661,9 +659,10 @@ struct WordOrderQuizView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                .padding(.top, 10)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
             }
-            .padding(.vertical)
+            .padding(.vertical, 10)
         }
         .onAppear {
             availableWords = question.options.enumerated().map { (id: $0.offset, word: $0.element) }
