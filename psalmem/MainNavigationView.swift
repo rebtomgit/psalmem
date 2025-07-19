@@ -12,191 +12,412 @@ struct MainNavigationView: View {
     @State private var selectedPsalm: Psalm?
     @State private var selectedTranslation: Translation?
     @State private var showingAssessment = false
-    @State private var showingMemorization = false
+    @State private var showingQuiz = false
     @State private var currentUser: User?
+    @State private var appState: AppState = .loading
+    @State private var recommendedPsalms: [Psalm] = []
+    @State private var selectedVerses: Set<Int> = []
+    
+    enum AppState {
+        case loading
+        case needsAssessment
+        case needsTranslation
+        case needsPsalmSelection
+        case ready
+    }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Always show assessment button
-                Button(currentUser == nil ? "Take Memory Assessment" : "Retake Memory Assessment") {
-                    showingAssessment = true
-                }
-                .buttonStyle(.borderedProminent)
-                .padding(.top)
-                
-                headerSection
-                
-                // Psalm selection
-                if psalms.isEmpty {
-                    Text("No psalms available.")
-                        .foregroundColor(.red)
-                    Button("Load Sample Psalms") {
-                        loadSamplePsalms()
-                    }
-                    .buttonStyle(.bordered)
-                } else {
-                    psalmSelectionSection
-                    translationSelectionSection
-                }
-                
-                // Show verses if both selected
-                if let psalm = selectedPsalm, let translation = selectedTranslation {
-                    versesSection(psalm: psalm, translation: translation)
-                }
-                
-                if !progress.isEmpty {
-                    progressSection
-                }
-                
-                if let user = currentUser {
-                    memoryProfileSection(user: user)
-                }
+        Group {
+            switch appState {
+            case .loading:
+                loadingView
+            case .needsAssessment:
+                assessmentPromptView
+            case .needsTranslation:
+                translationSelectionView
+            case .needsPsalmSelection:
+                psalmRecommendationView
+            case .ready:
+                mainContentView
             }
-            .padding()
-        }
-        .sheet(isPresented: $showingAssessment) {
-            MemoryAssessmentView()
         }
         .onAppear {
             checkUserStatus()
         }
+        .sheet(isPresented: $showingAssessment) {
+            MemoryAssessmentView()
+        }
+        .sheet(isPresented: $showingQuiz) {
+            if let psalm = selectedPsalm, let translation = selectedTranslation {
+                PsalmQuizView(psalm: psalm, translation: translation)
+            }
+        }
+    }
+    
+    private var loadingView: some View {
+        VStack {
+            ProgressView("Loading...")
+                .scaleEffect(1.5)
+        }
+    }
+    
+    private var assessmentPromptView: some View {
+        VStack(spacing: 30) {
+            Text("Welcome to PsalmMem")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+            Text("Let's start with a quick memory assessment to personalize your experience.")
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            Button("Take Memory Assessment") {
+                showingAssessment = true
+            }
+            .buttonStyle(.borderedProminent)
+            .font(.title3)
+        }
+        .padding()
+    }
+    
+    private var translationSelectionView: some View {
+        VStack(spacing: 30) {
+            Text("Choose Your Translation")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+            Text("Select the Bible translation you'd like to use for memorization:")
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            HStack(spacing: 16) {
+                ForEach(translations, id: \.id) { translation in
+                    Button(action: {
+                        selectedTranslation = translation
+                        appState = .needsPsalmSelection
+                    }) {
+                        Text(translation.name)
+                            .fontWeight(selectedTranslation?.id == translation.id ? .bold : .regular)
+                            .foregroundColor(selectedTranslation?.id == translation.id ? .white : .blue)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 16)
+                            .background(selectedTranslation?.id == translation.id ? Color.blue : Color.gray.opacity(0.2))
+                            .cornerRadius(8)
+                    }
+                }
+            }
+        }
+        .padding()
+    }
+    
+    private var psalmRecommendationView: some View {
+        VStack(spacing: 20) {
+            Text("Recommended Psalms")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+            if let user = currentUser, let translation = selectedTranslation {
+                Text("Based on your memory profile, here are the best psalms to start with:")
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                let recs = getRecommendedPsalms(for: user, translation: translation)
+                ScrollView {
+                    VStack(spacing: 15) {
+                        ForEach(recs, id: \.id) { psalm in
+                            Button(action: {
+                                selectedPsalm = psalm
+                                appState = .ready
+                            }) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Psalm \(psalm.number)")
+                                        .font(.headline)
+                                        .fontWeight(.semibold)
+                                    Text(psalm.title)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                    Text("Recommended for your memory type")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding()
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(10)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .padding()
+                }
+            }
+        }
+        .padding()
+    }
+    
+    private var mainContentView: some View {
+        VStack(spacing: 20) {
+            if let psalm = selectedPsalm, let translation = selectedTranslation {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Psalm \(psalm.number): \(psalm.title)")
+                            .font(.title)
+                            .fontWeight(.bold)
+                        Spacer()
+                        // Translation switcher
+                        Menu {
+                            ForEach(translations, id: \.id) { t in
+                                Button(t.name) {
+                                    selectedTranslation = t
+                                }
+                            }
+                        } label: {
+                            Text(translation.abbreviation)
+                                .font(.headline)
+                                .foregroundColor(.blue)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(8)
+                        }
+                    }
+                    .padding(.top)
+                    let psalmVerses = verses.filter { $0.psalm?.id == psalm.id && $0.translation?.id == translation.id }.sorted { $0.number < $1.number }
+                    Text("Scroll to view the entire psalm. Tap a verse to select for memorization.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(psalmVerses, id: \.id) { verse in
+                                HStack(alignment: .top) {
+                                    Button(action: {
+                                        if selectedVerses.contains(verse.number) {
+                                            selectedVerses.remove(verse.number)
+                                        } else {
+                                            selectedVerses.insert(verse.number)
+                                        }
+                                    }) {
+                                        Image(systemName: selectedVerses.contains(verse.number) ? "checkmark.square.fill" : "square")
+                                            .foregroundColor(selectedVerses.contains(verse.number) ? .blue : .gray)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    Text("\(verse.number).")
+                                        .font(.body)
+                                        .fontWeight(.semibold)
+                                        .frame(width: 30, alignment: .trailing)
+                                    Text(verse.text)
+                                        .font(.body)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding(.vertical, 2)
+                            }
+                        }
+                    }
+                }
+                .padding()
+                .background(Color.white)
+                .cornerRadius(12)
+                .shadow(radius: 4)
+                .padding()
+            }
+            
+            // Action buttons
+            HStack(spacing: 20) {
+                Button("Start Quiz") {
+                    showingQuiz = true
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(selectedPsalm == nil || selectedTranslation == nil)
+                
+                Button("Reset Sample Data") {
+                    resetSampleData()
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.top)
+        }
+        .padding()
     }
     
     private func checkUserStatus() {
-        if !users.isEmpty {
+        // Ensure psalms are loaded
+        if psalms.isEmpty {
+            loadSamplePsalms()
+        }
+        // Set up a default user if none exists
+        if users.isEmpty {
+            appState = .needsAssessment
+        } else {
             currentUser = users.first
+            if selectedTranslation == nil {
+                appState = .needsTranslation
+            } else if selectedPsalm == nil {
+                appState = .needsPsalmSelection
+            } else {
+                appState = .ready
+            }
+        }
+    }
+    
+    private func getRecommendedPsalms(for user: User, translation: Translation) -> [Psalm] {
+        // Simple recommendation logic based on memory strengths
+        let allPsalms = Array(psalms.prefix(20))
+        if user.memoryStrengths.contains(.visual) {
+            return Array(allPsalms.prefix(5))
+        } else if user.memoryStrengths.contains(.auditory) {
+            return Array(allPsalms.suffix(5))
+        } else {
+            return Array(allPsalms.prefix(10))
         }
     }
     
     private func loadSamplePsalms() {
-        // Add 2 sample psalms and 2 translations, and a few verses for each
-        let kjv = Translation(name: "King James", abbreviation: "KJV")
-        let esv = Translation(name: "English Standard", abbreviation: "ESV")
-        modelContext.insert(kjv)
-        modelContext.insert(esv)
-        let psalm1 = Psalm(number: 1, title: "The Way of the Righteous and the Wicked")
-        let psalm2 = Psalm(number: 2, title: "The Reign of the Lord's Anointed")
-        modelContext.insert(psalm1)
-        modelContext.insert(psalm2)
-        let verses1kjv = [
-            Verse(number: 1, text: "Blessed is the man that walketh not in the counsel of the ungodly...", psalm: psalm1, translation: kjv),
-            Verse(number: 2, text: "But his delight is in the law of the LORD...", psalm: psalm1, translation: kjv)
-        ]
-        let verses1esv = [
-            Verse(number: 1, text: "Blessed is the man who walks not in the counsel of the wicked...", psalm: psalm1, translation: esv),
-            Verse(number: 2, text: "But his delight is in the law of the LORD...", psalm: psalm1, translation: esv)
-        ]
-        let verses2kjv = [
-            Verse(number: 1, text: "Why do the heathen rage, and the people imagine a vain thing?", psalm: psalm2, translation: kjv)
-        ]
-        let verses2esv = [
-            Verse(number: 1, text: "Why do the nations rage and the peoples plot in vain?", psalm: psalm2, translation: esv)
-        ]
-        for v in verses1kjv + verses1esv + verses2kjv + verses2esv { modelContext.insert(v) }
-        try? modelContext.save()
+        PsalmDataService.shared.populatePsalms(modelContext: modelContext)
+    }
+
+    private func resetSampleData() {
+        // Remove all psalms, verses, and translations, then reload
+        for psalm in psalms { modelContext.delete(psalm) }
+        for verse in verses { modelContext.delete(verse) }
+        for translation in translations { modelContext.delete(translation) }
+        loadSamplePsalms()
+        selectedPsalm = nil
+        selectedTranslation = nil
+        appState = .needsTranslation
+    }
+}
+
+struct PsalmDetailView: View {
+    let psalm: Psalm
+    let translation: Translation
+    @Environment(\.dismiss) private var dismiss
+    @Query private var verses: [Verse]
+    @State private var showWholePsalm = false
+    @State private var currentLineIndex = 0
+    @State private var linesPerView = 5
+    
+    private var psalmVerses: [Verse] {
+        verses.filter { $0.psalm?.id == psalm.id && $0.translation?.id == translation.id }
+            .sorted { $0.number < $1.number }
     }
     
-    private var headerSection: some View {
-        VStack {
-            Text("PsalmMem")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-            if let user = currentUser {
-                Text("Welcome back, \(user.name)")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
+    private var allLines: [String] {
+        if showWholePsalm {
+            return psalmVerses.map { $0.text }
+        } else {
+            return psalmVerses.enumerated().map { index, verse in
+                "\(verse.number). \(verse.text)"
             }
         }
-        .padding()
     }
     
-    private var psalmSelectionSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Available Psalms")
-                .font(.title2)
-                .fontWeight(.semibold)
-            Text("Choose a psalm to memorize.")
-                .font(.body)
-                .foregroundColor(.secondary)
-            ForEach(psalms.prefix(20), id: \.id) { psalm in
-                Button(action: {
-                    selectedPsalm = psalm
-                }) {
-                    HStack {
-                        Text("Psalm \(psalm.number): \(psalm.title)")
-                            .fontWeight(selectedPsalm?.id == psalm.id ? .bold : .regular)
-                        if selectedPsalm?.id == psalm.id {
-                            Image(systemName: "checkmark")
+    private var currentLines: [String] {
+        let startIndex = currentLineIndex
+        let endIndex = min(startIndex + linesPerView, allLines.count)
+        return Array(allLines[startIndex..<endIndex])
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                // Header
+                VStack(spacing: 10) {
+                    Text("Psalm \(psalm.number)")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                    
+                    Text(psalm.title)
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                    
+                    Text(translation.name)
+                        .font(.headline)
+                        .foregroundColor(.blue)
+                }
+                .padding()
+                
+                // Display mode toggle
+                HStack {
+                    Button(showWholePsalm ? "Show Verse by Verse" : "Show Whole Psalm") {
+                        showWholePsalm.toggle()
+                        currentLineIndex = 0
+                    }
+                    .buttonStyle(.bordered)
+                    
+                    Spacer()
+                    
+                    if !showWholePsalm {
+                        Button("5 Lines") {
+                            linesPerView = 5
+                        }
+                        .buttonStyle(.bordered)
+                        .background(linesPerView == 5 ? Color.blue.opacity(0.2) : Color.clear)
+                        
+                        Button("10 Lines") {
+                            linesPerView = 10
+                        }
+                        .buttonStyle(.bordered)
+                        .background(linesPerView == 10 ? Color.blue.opacity(0.2) : Color.clear)
+                    }
+                }
+                .padding(.horizontal)
+                
+                // Content
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(currentLines.indices, id: \.self) { index in
+                            Text(currentLines[index])
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 2)
                         }
                     }
-                }
-                .padding(6)
-                .background(selectedPsalm?.id == psalm.id ? Color.blue.opacity(0.1) : Color.clear)
-                .cornerRadius(8)
-            }
-        }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(10)
-    }
-    
-    private var translationSelectionSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Choose Translation")
-                .font(.title2)
-                .fontWeight(.semibold)
-            HStack(spacing: 10) {
-                ForEach(translations, id: \.id) { t in
-                    Button(t.name) {
-                        selectedTranslation = t
-                    }
                     .padding()
-                    .background(selectedTranslation?.id == t.id ? Color.blue.opacity(0.2) : Color.gray.opacity(0.2))
-                    .cornerRadius(8)
+                }
+                .frame(maxHeight: .infinity)
+                
+                // Navigation buttons
+                if !showWholePsalm && allLines.count > linesPerView {
+                    HStack {
+                        Button("Previous") {
+                            currentLineIndex = max(0, currentLineIndex - linesPerView)
+                        }
+                        .disabled(currentLineIndex == 0)
+                        .buttonStyle(.bordered)
+                        
+                        Spacer()
+                        
+                        Text("\(currentLineIndex + 1)-\(min(currentLineIndex + linesPerView, allLines.count)) of \(allLines.count)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Button("Next") {
+                            currentLineIndex = min(allLines.count - linesPerView, currentLineIndex + linesPerView)
+                        }
+                        .disabled(currentLineIndex >= allLines.count - linesPerView)
+                        .buttonStyle(.bordered)
+                    }
+                    .padding(.horizontal)
                 }
             }
-        }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(10)
-    }
-    
-    private func versesSection(psalm: Psalm, translation: Translation) -> some View {
-        let psalmVerses = verses.filter { $0.psalm?.id == psalm.id && $0.translation?.id == translation.id }
-        return VStack(alignment: .leading, spacing: 10) {
-            Text("Psalm \(psalm.number) (\(translation.name))")
-                .font(.title2)
-                .fontWeight(.bold)
-            if psalmVerses.isEmpty {
-                Text("No verses available for this psalm and translation.")
-                    .foregroundColor(.red)
-            } else {
-                ForEach(psalmVerses.sorted { $0.number < $1.number }, id: \.id) { verse in
-                    Text("\(verse.number). \(verse.text)")
-                        .padding(.vertical, 2)
+            .navigationTitle("Psalm \(psalm.number)")
+#if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+#endif
+            .toolbar {
+#if os(iOS)
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
                 }
+#else
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+#endif
             }
         }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(10)
-    }
-    
-    private var progressSection: some View {
-        ProgressListView(progress: Array(progress.prefix(5)))
-    }
-    
-    private func memoryProfileSection(user: User) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Memory Profile")
-                .font(.title2)
-                .fontWeight(.semibold)
-            MemoryScoreView(user: user)
-        }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(10)
     }
 }
 
