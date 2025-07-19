@@ -471,12 +471,20 @@ enum QuizType: CaseIterable {
     }
 }
 
-struct QuizQuestion {
+struct QuizQuestion: Equatable {
     let type: QuizType
     let question: String
     let correctAnswer: String
     let options: [String]
     let verseNumber: Int
+    
+    static func == (lhs: QuizQuestion, rhs: QuizQuestion) -> Bool {
+        return lhs.type == rhs.type &&
+               lhs.question == rhs.question &&
+               lhs.correctAnswer == rhs.correctAnswer &&
+               lhs.options == rhs.options &&
+               lhs.verseNumber == rhs.verseNumber
+    }
 }
 
 struct QuizQuestionView: View {
@@ -665,17 +673,23 @@ struct WordOrderQuizView: View {
             .padding(.vertical, 10)
         }
         .onAppear {
-            availableWords = question.options.enumerated().map { (id: $0.offset, word: $0.element) }
+            resetWords()
+        }
+        .onChange(of: question) { _, _ in
+            resetWords()
         }
         .alert(isCorrect ? "Correct!" : "Incorrect", isPresented: $showingResult) {
             Button("Continue") {
-                selectedWords.removeAll()
-                availableWords = question.options.enumerated().map { (id: $0.offset, word: $0.element) }
                 showingResult = false
                 onAnswer(isCorrect)
             }
         } message: {
             Text(isCorrect ? "Great job!" : "The correct order was: \(question.correctAnswer)")
         }
+    }
+    
+    private func resetWords() {
+        selectedWords.removeAll()
+        availableWords = question.options.enumerated().map { (id: $0.offset, word: $0.element) }
     }
 } 
