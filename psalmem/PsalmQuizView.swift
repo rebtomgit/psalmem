@@ -726,14 +726,64 @@ struct WordOrderQuizView: View {
         .onChange(of: question) { _, _ in
             resetWords()
         }
-        .alert(isCorrect ? "Correct!" : "Incorrect", isPresented: $showingResult) {
-            Button("Continue") {
-                showingResult = false
-                onAnswer(isCorrect)
+        .overlay(
+            Group {
+                if showingResult {
+                    VStack {
+                        Spacer()
+                        
+                        VStack(spacing: 12) {
+                            HStack {
+                                Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                    .foregroundColor(isCorrect ? .green : .red)
+                                    .font(.title2)
+                                
+                                Text(isCorrect ? "Correct!" : "Incorrect")
+                                    .font(.headline)
+                                    .foregroundColor(isCorrect ? .green : .red)
+                                
+                                Spacer()
+                            }
+                            
+                            if !isCorrect {
+                                Text("The correct order was:")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                
+                                Text(question.correctAnswer)
+                                    .font(.body)
+                                    .fontWeight(.medium)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.green.opacity(0.1))
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                                    )
+                            }
+                            
+                            Button("Continue") {
+                                showingResult = false
+                                onAnswer(isCorrect)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .frame(maxWidth: .infinity)
+                        }
+                        .padding()
+                        .background(Color(.systemBackground))
+                        .cornerRadius(12)
+                        .shadow(radius: 10)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 20)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.3), value: showingResult)
+                }
             }
-        } message: {
-            Text(isCorrect ? "Great job!" : "The correct order was: \(question.correctAnswer)")
-        }
+        )
     }
     
     private func resetWords() {
