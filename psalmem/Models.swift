@@ -92,7 +92,7 @@ final class Progress {
     var psalm: Psalm?
     var user: User?
     var translation: Translation?
-    var memorizedVersesString: String
+    var memorizedVersesString: String?
     var overallProgress: Double
     var lastPracticed: Date
     var createdAt: Date
@@ -108,38 +108,16 @@ final class Progress {
         self.createdAt = Date()
     }
     
-    // Migration helper for old data
-    static func migrateOldData(modelContext: ModelContext) {
-        DiagnosticLogger.shared.logDatabaseOperation("Progress migration", entity: "Progress", success: true)
-        
-        do {
-            let allProgress = try modelContext.fetch(FetchDescriptor<Progress>())
-            for progress in allProgress {
-                // If the string is empty but we have old data, try to migrate
-                if progress.memorizedVersesString.isEmpty {
-                    // This is a new record, no migration needed
-                    continue
-                }
-                
-                DiagnosticLogger.shared.logDatabaseOperation("Progress migration", entity: "Progress", success: true)
-            }
-        } catch {
-            DiagnosticLogger.shared.logError("Progress migration failed")
-        }
-    }
-    
     var memorizedVerses: [Int] {
         get {
-            if memorizedVersesString.isEmpty {
+            guard let memorizedVersesString = memorizedVersesString, !memorizedVersesString.isEmpty else {
                 return []
             }
             let result = memorizedVersesString.components(separatedBy: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
-            DiagnosticLogger.shared.logDatabaseOperation("Progress.memorizedVerses get", entity: "Progress", success: true)
             return result
         }
         set {
             memorizedVersesString = newValue.map(String.init).joined(separator: ",")
-            DiagnosticLogger.shared.logDatabaseOperation("Progress.memorizedVerses set", entity: "Progress", success: true)
         }
     }
 }
