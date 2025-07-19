@@ -555,70 +555,96 @@ struct WordOrderQuizView: View {
     @State private var isCorrect = false
     
     var body: some View {
-        VStack(spacing: 20) {
-            // Selected words
-            VStack(spacing: 10) {
-                Text("Your answer:")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                    ForEach(selectedWords, id: \.id) { item in
-                        Text(item.word)
-                            .padding(8)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
+        ScrollView {
+            VStack(spacing: 15) {
+                // Selected words
+                VStack(spacing: 8) {
+                    Text("Your answer:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    if selectedWords.isEmpty {
+                        Text("Tap words below to build your answer")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.gray.opacity(0.1))
                             .cornerRadius(8)
-                    }
-                }
-            }
-            .padding()
-            .background(Color.gray.opacity(0.1))
-            .cornerRadius(10)
-            
-            // Available words
-            VStack(spacing: 10) {
-                Text("Available words:")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                    ForEach(availableWords, id: \.id) { item in
-                        Button(action: {
-                            if let index = availableWords.firstIndex(where: { $0.id == item.id }) {
-                                selectedWords.append(item)
-                                availableWords.remove(at: index)
+                    } else {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 6) {
+                            ForEach(selectedWords, id: \.id) { item in
+                                Button(action: {
+                                    // Remove word from selected and put back in available
+                                    if let index = selectedWords.firstIndex(where: { $0.id == item.id }) {
+                                        availableWords.append(item)
+                                        selectedWords.remove(at: index)
+                                    }
+                                }) {
+                                    Text(item.word)
+                                        .font(.caption)
+                                        .padding(6)
+                                        .background(Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(6)
+                                }
+                                .buttonStyle(PlainButtonStyle())
                             }
-                        }) {
-                            Text(item.word)
-                                .padding(8)
-                                .background(Color.gray)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
                         }
-                        .disabled(selectedWords.contains(where: { $0.id == item.id }))
                     }
                 }
-            }
-            .padding()
-            .background(Color.gray.opacity(0.1))
-            .cornerRadius(10)
-            
-            HStack {
-                Button("Clear") {
-                    availableWords.append(contentsOf: selectedWords)
-                    selectedWords.removeAll()
-                }
-                .buttonStyle(.bordered)
+                .padding(.horizontal)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(10)
                 
-                Button("Check") {
-                    let userAnswer = selectedWords.map { $0.word }.joined(separator: " ")
-                    isCorrect = userAnswer.lowercased() == question.correctAnswer.lowercased()
-                    showingResult = true
+                // Available words
+                VStack(spacing: 8) {
+                    Text("Available words:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 6) {
+                        ForEach(availableWords, id: \.id) { item in
+                            Button(action: {
+                                if let index = availableWords.firstIndex(where: { $0.id == item.id }) {
+                                    selectedWords.append(item)
+                                    availableWords.remove(at: index)
+                                }
+                            }) {
+                                Text(item.word)
+                                    .font(.caption)
+                                    .padding(6)
+                                    .background(Color.gray)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(6)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(selectedWords.isEmpty)
+                .padding(.horizontal)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(10)
+                
+                // Action buttons
+                HStack(spacing: 15) {
+                    Button("Clear All") {
+                        availableWords.append(contentsOf: selectedWords)
+                        selectedWords.removeAll()
+                    }
+                    .buttonStyle(.bordered)
+                    
+                    Button("Check Answer") {
+                        let userAnswer = selectedWords.map { $0.word }.joined(separator: " ")
+                        isCorrect = userAnswer.lowercased() == question.correctAnswer.lowercased()
+                        showingResult = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(selectedWords.isEmpty)
+                }
+                .padding(.top, 10)
             }
+            .padding(.vertical)
         }
         .onAppear {
             availableWords = question.options.enumerated().map { (id: $0.offset, word: $0.element) }
