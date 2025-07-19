@@ -64,6 +64,8 @@ struct PsalmQuizView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
     
     private var quizTypeSelectionView: some View {
@@ -646,7 +648,7 @@ struct WordOrderQuizView: View {
     }
     
     private var actionButtonsSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             HStack(spacing: 15) {
                 Button("Clear All") {
                     availableWords.append(contentsOf: selectedWords)
@@ -671,7 +673,7 @@ struct WordOrderQuizView: View {
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.top, 6)
+        .padding(.top, 4)
     }
     
     private var correctAnswerSection: some View {
@@ -701,7 +703,7 @@ struct WordOrderQuizView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 selectedWordsSection
                 availableWordsSection
                 actionButtonsSection
@@ -710,10 +712,14 @@ struct WordOrderQuizView: View {
                 if !selectedWords.isEmpty {
                     correctAnswerSection
                 }
+                
+                // Extra padding to ensure submit button is visible
+                Spacer(minLength: 20)
             }
-            .padding(.vertical, 8)
-            .padding(.bottom, 16)
+            .padding(.vertical, 6)
+            .padding(.bottom, 12)
         }
+        .frame(maxHeight: .infinity)
         .onAppear {
             resetWords()
         }
@@ -734,4 +740,4 @@ struct WordOrderQuizView: View {
         selectedWords.removeAll()
         availableWords = question.options.enumerated().map { (id: $0.offset, word: $0.element) }
     }
-} 
+}
