@@ -223,12 +223,17 @@ struct PsalmQuizView: View {
     }
     
     private func startQuiz() {
+        let startTime = Date()
         quizQuestions = generateQuizQuestions()
         currentQuizIndex = 0
         currentScore = 0
         totalQuestions = quizQuestions.count
         showingQuizTypeSelection = false
         quizCompleted = false
+        
+        let duration = Date().timeIntervalSince(startTime)
+        DiagnosticLogger.shared.logPerformance("Quiz generation", duration: duration)
+        DiagnosticLogger.shared.logQuizStarted(psalmNumber: psalm.number, quizType: selectedQuizType.displayName)
     }
     
     private func handleAnswer(correct: Bool) {
@@ -236,10 +241,26 @@ struct PsalmQuizView: View {
             currentScore += 1
         }
         
+        // Log the question answer
+        if currentQuizIndex < quizQuestions.count {
+            let question = quizQuestions[currentQuizIndex]
+            DiagnosticLogger.shared.logQuestionAnswered(
+                questionType: question.type.displayName,
+                correct: correct,
+                verseNumber: question.verseNumber
+            )
+        }
+        
         if currentQuizIndex < quizQuestions.count - 1 {
             currentQuizIndex += 1
         } else {
             quizCompleted = true
+            DiagnosticLogger.shared.logQuizCompleted(
+                psalmNumber: psalm.number,
+                quizType: selectedQuizType.displayName,
+                score: currentScore,
+                totalQuestions: totalQuestions
+            )
             saveProgress()
         }
     }
@@ -328,12 +349,23 @@ struct PsalmQuizView: View {
         for verse in verses {
             let words = verse.text.components(separatedBy: " ")
             if words.count > 4 {
-                let shuffledWords = words.shuffled()
+                // Create unique words by adding index to duplicates
+                var uniqueWords: [String] = []
+                var wordCounts: [String: Int] = [:]
+                
+                for word in words {
+                    let count = wordCounts[word, default: 0] + 1
+                    wordCounts[word] = count
+                    let uniqueWord = count > 1 ? "\(word)_\(count)" : word
+                    uniqueWords.append(uniqueWord)
+                }
+                
+                let shuffledWords = uniqueWords.shuffled()
                 
                 let question = QuizQuestion(
                     type: .wordOrder,
                     question: "Arrange these words in the correct order for verse \(verse.number):",
-                    correctAnswer: words.joined(separator: " "),
+                    correctAnswer: uniqueWords.joined(separator: " "),
                     options: shuffledWords,
                     verseNumber: verse.number
                 )
@@ -453,10 +485,6 @@ struct QuizQuestionView: View {
     let question: QuizQuestion
     let onAnswer: (Bool) -> Void
     
-    @State private var selectedAnswer = ""
-    @State private var showingResult = false
-    @State private var isCorrect = false
-    
     var body: some View {
         VStack(spacing: 20) {
             Text(question.question)
@@ -471,13 +499,6 @@ struct QuizQuestionView: View {
             } else {
                 MultipleChoiceQuizView(question: question, onAnswer: onAnswer)
             }
-        }
-        .alert(isCorrect ? "Correct!" : "Incorrect", isPresented: $showingResult) {
-            Button("Continue") {
-                onAnswer(isCorrect)
-            }
-        } message: {
-            Text(isCorrect ? "Great job!" : "The correct answer was: \(question.correctAnswer)")
         }
     }
 }
@@ -514,6 +535,8 @@ struct MultipleChoiceQuizView: View {
         }
         .alert(isCorrect ? "Correct!" : "Incorrect", isPresented: $showingResult) {
             Button("Continue") {
+                selectedAnswer = ""
+                showingResult = false
                 onAnswer(isCorrect)
             }
         } message: {
@@ -526,8 +549,8 @@ struct WordOrderQuizView: View {
     let question: QuizQuestion
     let onAnswer: (Bool) -> Void
     
-    @State private var selectedWords: [String] = []
-    @State private var availableWords: [String] = []
+    @State private var selectedWords: [(id: Int, word: String)] = []
+    @State private var availableWords: [(id: Int, word: String)] = []
     @State private var showingResult = false
     @State private var isCorrect = false
     
@@ -540,8 +563,8 @@ struct WordOrderQuizView: View {
                     .foregroundColor(.secondary)
                 
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                    ForEach(selectedWords, id: \.self) { word in
-                        Text(word)
+                    ForEach(selectedWords, id: \.id) { item in
+                        Text(item.word)
                             .padding(8)
                             .background(Color.blue)
                             .foregroundColor(.white)
@@ -560,20 +583,20 @@ struct WordOrderQuizView: View {
                     .foregroundColor(.secondary)
                 
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                    ForEach(availableWords, id: \.self) { word in
+                    ForEach(availableWords, id: \.id) { item in
                         Button(action: {
-                            if let index = availableWords.firstIndex(of: word) {
-                                selectedWords.append(word)
+                            if let index = availableWords.firstIndex(where: { $0.id == item.id }) {
+                                selectedWords.append(item)
                                 availableWords.remove(at: index)
                             }
                         }) {
-                            Text(word)
+                            Text(item.word)
                                 .padding(8)
                                 .background(Color.gray)
                                 .foregroundColor(.white)
                                 .cornerRadius(8)
                         }
-                        .disabled(selectedWords.contains(word))
+                        .disabled(selectedWords.contains(where: { $0.id == item.id }))
                     }
                 }
             }
@@ -589,7 +612,7 @@ struct WordOrderQuizView: View {
                 .buttonStyle(.bordered)
                 
                 Button("Check") {
-                    let userAnswer = selectedWords.joined(separator: " ")
+                    let userAnswer = selectedWords.map { $0.word }.joined(separator: " ")
                     isCorrect = userAnswer.lowercased() == question.correctAnswer.lowercased()
                     showingResult = true
                 }
@@ -598,10 +621,13 @@ struct WordOrderQuizView: View {
             }
         }
         .onAppear {
-            availableWords = question.options
+            availableWords = question.options.enumerated().map { (id: $0.offset, word: $0.element) }
         }
         .alert(isCorrect ? "Correct!" : "Incorrect", isPresented: $showingResult) {
             Button("Continue") {
+                selectedWords.removeAll()
+                availableWords = question.options.enumerated().map { (id: $0.offset, word: $0.element) }
+                showingResult = false
                 onAnswer(isCorrect)
             }
         } message: {

@@ -54,6 +54,7 @@ struct MemoryAssessmentView: View {
             .padding(.horizontal)
             
             Button("Start Assessment") {
+                DiagnosticLogger.shared.logMemoryAssessmentStarted()
                 showingNameInput = false
             }
             .buttonStyle(.borderedProminent)
@@ -171,10 +172,16 @@ struct MemoryAssessmentView: View {
         for (testType, score) in testResults {
             let test = MemoryTest(type: testType, score: score, user: user)
             modelContext.insert(test)
+            DiagnosticLogger.shared.logMemoryAssessmentCompleted(score: score, type: testType.rawValue)
         }
         
         modelContext.insert(user)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+            DiagnosticLogger.shared.logDatabaseOperation("User and test results save", entity: "User", success: true)
+        } catch {
+            DiagnosticLogger.shared.logError(error, context: "Saving user and assessment results")
+        }
         
         // Post notification that assessment is completed
         NotificationCenter.default.post(name: .assessmentCompleted, object: nil)

@@ -23,8 +23,16 @@ struct psalmemApp: App {
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            DiagnosticLogger.shared.logAppStart()
+            
+            // Run migration for old data
+            let context = container.mainContext
+            Progress.migrateOldData(modelContext: context)
+            
+            return container
         } catch {
+            DiagnosticLogger.shared.logError(error, context: "ModelContainer initialization")
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()

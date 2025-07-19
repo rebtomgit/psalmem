@@ -13,6 +13,7 @@ struct MainNavigationView: View {
     @State private var selectedTranslation: Translation?
     @State private var showingAssessment = false
     @State private var showingQuiz = false
+    @State private var showingDiagnostics = false
     @State private var currentUser: User?
     @State private var appState: AppState = .loading
     @State private var recommendedPsalms: [Psalm] = []
@@ -51,6 +52,9 @@ struct MainNavigationView: View {
             if let psalm = selectedPsalm, let translation = selectedTranslation {
                 PsalmQuizView(psalm: psalm, translation: translation)
             }
+        }
+        .sheet(isPresented: $showingDiagnostics) {
+            DiagnosticView()
         }
     }
     
@@ -92,6 +96,7 @@ struct MainNavigationView: View {
                 ForEach(translations, id: \.id) { translation in
                     Button(action: {
                         selectedTranslation = translation
+                        DiagnosticLogger.shared.logTranslationSelected(translation: translation.name)
                         appState = .needsPsalmSelection
                     }) {
                         Text(translation.name)
@@ -124,6 +129,7 @@ struct MainNavigationView: View {
                         ForEach(recs, id: \.id) { psalm in
                             Button(action: {
                                 selectedPsalm = psalm
+                                DiagnosticLogger.shared.logPsalmSelected(psalmNumber: psalm.number, title: psalm.title)
                                 appState = .ready
                             }) {
                                 VStack(alignment: .leading, spacing: 8) {
@@ -221,6 +227,9 @@ struct MainNavigationView: View {
             // Action buttons
             HStack(spacing: 20) {
                 Button("Start Quiz") {
+                    if let psalm = selectedPsalm {
+                        DiagnosticLogger.shared.logQuizStarted(psalmNumber: psalm.number, quizType: "Mixed")
+                    }
                     showingQuiz = true
                 }
                 .buttonStyle(.borderedProminent)
@@ -230,6 +239,12 @@ struct MainNavigationView: View {
                     resetSampleData()
                 }
                 .buttonStyle(.bordered)
+                
+                Button("Diagnostics") {
+                    DiagnosticLogger.shared.logUserAction("Diagnostics button tapped")
+                    showingDiagnostics = true
+                }
+                .buttonStyle(.bordered)
             }
             .padding(.top)
         }
@@ -237,20 +252,27 @@ struct MainNavigationView: View {
     }
     
     private func checkUserStatus() {
+        DiagnosticLogger.shared.logUserAction("App state check", details: "Psalms: \(psalms.count), Users: \(users.count)")
+        
         // Ensure psalms are loaded
         if psalms.isEmpty {
+            DiagnosticLogger.shared.logInfo("No psalms found, loading sample data")
             loadSamplePsalms()
         }
         // Set up a default user if none exists
         if users.isEmpty {
+            DiagnosticLogger.shared.logInfo("No users found, starting assessment flow")
             appState = .needsAssessment
         } else {
             currentUser = users.first
             if selectedTranslation == nil {
+                DiagnosticLogger.shared.logInfo("No translation selected, showing translation selection")
                 appState = .needsTranslation
             } else if selectedPsalm == nil {
+                DiagnosticLogger.shared.logInfo("No psalm selected, showing psalm selection")
                 appState = .needsPsalmSelection
             } else {
+                DiagnosticLogger.shared.logInfo("App ready for use")
                 appState = .ready
             }
         }
