@@ -352,35 +352,93 @@ struct PsalmQuizView: View {
     private func generateMultipleChoiceQuestions() -> [QuizQuestion] {
         var questions: [QuizQuestion] = []
         
+        // Question type 1: Word meaning/context questions
         for verse in verses {
             let words = verse.text.components(separatedBy: " ")
-            if words.count > 2 {
-                let randomIndex = Int.random(in: 0..<words.count)
-                let correctWord = words[randomIndex]
-                
-                // Generate wrong options from other verses
-                var wrongOptions: [String] = []
-                for otherVerse in verses where otherVerse.number != verse.number {
-                    let otherWords = otherVerse.text.components(separatedBy: " ")
-                    if let randomWord = otherWords.randomElement() {
-                        wrongOptions.append(randomWord)
-                    }
+            if words.count > 3 {
+                // Find meaningful words (not articles, prepositions, etc.)
+                let meaningfulWords = words.filter { word in
+                    let cleanWord = word.lowercased().trimmingCharacters(in: .punctuationCharacters)
+                    return cleanWord.count > 2 && !["the", "and", "of", "in", "to", "for", "with", "by", "from", "a", "an", "is", "are", "was", "were", "be", "been", "have", "has", "had"].contains(cleanWord)
                 }
                 
-                let options = [correctWord] + Array(wrongOptions.prefix(3))
-                
+                if let targetWord = meaningfulWords.randomElement() {
+                    let question = QuizQuestion(
+                        type: .multipleChoice,
+                        question: "What is the main action or subject in verse \(verse.number)?",
+                        correctAnswer: targetWord,
+                        options: generateContextualOptions(correctWord: targetWord, allVerses: verses),
+                        verseNumber: verse.number
+                    )
+                    questions.append(question)
+                }
+            }
+        }
+        
+        // Question type 2: Verse identification questions
+        for verse in verses {
+            let otherVerses = verses.filter { $0.number != verse.number }
+            if let otherVerse = otherVerses.randomElement() {
                 let question = QuizQuestion(
                     type: .multipleChoice,
-                    question: "Which word completes this verse: \(words.enumerated().map { $0.offset == randomIndex ? "_____" : $0.element }.joined(separator: " "))",
-                    correctAnswer: correctWord,
-                    options: options.shuffled(),
+                    question: "Which verse contains this phrase: \"\(verse.text.prefix(50))...\"?",
+                    correctAnswer: "Verse \(verse.number)",
+                    options: ["Verse \(verse.number)", "Verse \(otherVerse.number)", "Verse \(Int.random(in: 1...10))", "Verse \(Int.random(in: 11...20))"],
                     verseNumber: verse.number
                 )
                 questions.append(question)
             }
         }
         
+        // Question type 3: Theme/meaning questions
+        let themeQuestions = [
+            ("What is the main theme of this psalm?", "Praise", ["Praise", "Sorrow", "Anger", "Fear"]),
+            ("What emotion does this psalm express?", "Joy", ["Joy", "Sadness", "Anger", "Confusion"]),
+            ("Who is the focus of this psalm?", "God", ["God", "Self", "Others", "Nature"])
+        ]
+        
+        for (questionText, correctAnswer, options) in themeQuestions {
+            let question = QuizQuestion(
+                type: .multipleChoice,
+                question: questionText,
+                correctAnswer: correctAnswer,
+                options: options.shuffled(),
+                verseNumber: 1
+            )
+            questions.append(question)
+        }
+        
         return questions
+    }
+    
+    private func generateContextualOptions(correctWord: String, allVerses: [Verse]) -> [String] {
+        var options = [correctWord]
+        
+        // Get other meaningful words from different verses
+        for verse in allVerses {
+            let words = verse.text.components(separatedBy: " ")
+            let meaningfulWords = words.filter { word in
+                let cleanWord = word.lowercased().trimmingCharacters(in: .punctuationCharacters)
+                return cleanWord.count > 2 && cleanWord != correctWord.lowercased() && !["the", "and", "of", "in", "to", "for", "with", "by", "from", "a", "an", "is", "are", "was", "were", "be", "been", "have", "has", "had"].contains(cleanWord)
+            }
+            
+            if let word = meaningfulWords.randomElement() {
+                options.append(word)
+            }
+        }
+        
+        // Add some thematic words if we don't have enough options
+        let thematicWords = ["praise", "worship", "pray", "sing", "bless", "thank", "love", "trust", "hope", "faith", "grace", "mercy", "peace", "joy", "light", "life", "truth", "wisdom", "strength", "power"]
+        
+        while options.count < 4 {
+            if let word = thematicWords.randomElement() {
+                if !options.contains(word) {
+                    options.append(word)
+                }
+            }
+        }
+        
+        return options.shuffled()
     }
     
     private func generateWordOrderQuestions() -> [QuizQuestion] {
