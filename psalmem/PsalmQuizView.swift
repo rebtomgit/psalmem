@@ -363,14 +363,19 @@ struct PsalmQuizView: View {
                 }
                 
                 if let targetWord = meaningfulWords.randomElement() {
-                    let question = QuizQuestion(
-                        type: .multipleChoice,
-                        question: "What is the main action or subject in verse \(verse.number)?",
-                        correctAnswer: targetWord,
-                        options: generateContextualOptions(correctWord: targetWord, allVerses: verses),
-                        verseNumber: verse.number
-                    )
-                    questions.append(question)
+                    let options = generateContextualOptions(correctWord: targetWord, allVerses: verses)
+                    // Ensure no duplicates
+                    let uniqueOptions = Array(Set(options))
+                    if uniqueOptions.count >= 4 {
+                        let question = QuizQuestion(
+                            type: .multipleChoice,
+                            question: "What is the main action or subject in verse \(verse.number)?",
+                            correctAnswer: targetWord,
+                            options: uniqueOptions.shuffled(),
+                            verseNumber: verse.number
+                        )
+                        questions.append(question)
+                    }
                 }
             }
         }
@@ -379,11 +384,32 @@ struct PsalmQuizView: View {
         for verse in verses {
             let otherVerses = verses.filter { $0.number != verse.number }
             if let otherVerse = otherVerses.randomElement() {
+                // Generate unique wrong options
+                var wrongOptions: [String] = []
+                wrongOptions.append("Verse \(otherVerse.number)")
+                
+                // Add more unique wrong options
+                let allVerseNumbers = Set(verses.map { $0.number })
+                let availableNumbers = Set(1...20).subtracting(allVerseNumbers)
+                
+                // Add 2 more unique wrong options
+                for _ in 0..<2 {
+                    if let randomNumber = availableNumbers.randomElement() {
+                        wrongOptions.append("Verse \(randomNumber)")
+                    } else {
+                        // Fallback if we run out of numbers
+                        let fallbackNumber = Int.random(in: 21...30)
+                        wrongOptions.append("Verse \(fallbackNumber)")
+                    }
+                }
+                
+                let options = ["Verse \(verse.number)"] + wrongOptions
+                
                 let question = QuizQuestion(
                     type: .multipleChoice,
                     question: "Which verse contains this phrase: \"\(verse.text.prefix(50))...\"?",
                     correctAnswer: "Verse \(verse.number)",
-                    options: ["Verse \(verse.number)", "Verse \(otherVerse.number)", "Verse \(Int.random(in: 1...10))", "Verse \(Int.random(in: 11...20))"],
+                    options: options.shuffled(),
                     verseNumber: verse.number
                 )
                 questions.append(question)
@@ -439,39 +465,48 @@ struct PsalmQuizView: View {
         
         // Create questions based on actual content
         if let focus = focus {
-            let question = QuizQuestion(
-                type: .multipleChoice,
-                question: "Who is the main focus of this psalm?",
-                correctAnswer: focus.correct,
-                options: focus.options.shuffled(),
-                verseNumber: 1,
-                explanation: focus.explanation
-            )
-            questions.append(question)
+            let uniqueOptions = Array(Set(focus.options))
+            if uniqueOptions.count >= 4 {
+                let question = QuizQuestion(
+                    type: .multipleChoice,
+                    question: "Who is the main focus of this psalm?",
+                    correctAnswer: focus.correct,
+                    options: uniqueOptions.shuffled(),
+                    verseNumber: 1,
+                    explanation: focus.explanation
+                )
+                questions.append(question)
+            }
         }
         
         if let theme = theme {
-            let question = QuizQuestion(
-                type: .multipleChoice,
-                question: "What is the main theme of this psalm?",
-                correctAnswer: theme.correct,
-                options: theme.options.shuffled(),
-                verseNumber: 1,
-                explanation: theme.explanation
-            )
-            questions.append(question)
+            let uniqueOptions = Array(Set(theme.options))
+            if uniqueOptions.count >= 4 {
+                let question = QuizQuestion(
+                    type: .multipleChoice,
+                    question: "What is the main theme of this psalm?",
+                    correctAnswer: theme.correct,
+                    options: uniqueOptions.shuffled(),
+                    verseNumber: 1,
+                    explanation: theme.explanation
+                )
+                questions.append(question)
+            }
         }
         
         if let emotion = emotion {
-            let question = QuizQuestion(
-                type: .multipleChoice,
-                question: "What emotion or attitude does this psalm express?",
-                correctAnswer: emotion.correct,
-                options: emotion.options.shuffled(),
-                verseNumber: 1,
-                explanation: emotion.explanation
-            )
-            questions.append(question)
+            let uniqueOptions = Array(Set(emotion.options))
+            if uniqueOptions.count >= 4 {
+                let question = QuizQuestion(
+                    type: .multipleChoice,
+                    question: "What emotion or attitude does this psalm express?",
+                    correctAnswer: emotion.correct,
+                    options: uniqueOptions.shuffled(),
+                    verseNumber: 1,
+                    explanation: emotion.explanation
+                )
+                questions.append(question)
+            }
         }
         
         return questions
