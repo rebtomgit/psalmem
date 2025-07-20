@@ -710,11 +710,11 @@ struct WordOrderQuizView: View {
                     
                     // Add extra space when feedback is showing to prevent overlap
                     if showingResult {
-                        Spacer(minLength: 400)
+                        Spacer(minLength: 600)
                     }
                     
                     // Always add some bottom padding to ensure submit button is visible
-                    Spacer(minLength: 100)
+                    Spacer(minLength: 200)
                 }
                 .padding(.vertical, 4)
                 .padding(.bottom, 8)
@@ -774,7 +774,7 @@ struct WordOrderQuizView: View {
                     .cornerRadius(12)
                     .shadow(radius: 10)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 80)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .animation(.easeInOut(duration: 0.3), value: showingResult)
                 }
