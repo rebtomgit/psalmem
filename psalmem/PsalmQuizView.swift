@@ -372,9 +372,24 @@ struct PsalmQuizView: View {
                 let availableNumbers = Set(1...20).subtracting(allVerseNumbers)
                 
                 // Add 2 more unique wrong options
+                var usedNumbers = Set([otherVerse.number])
                 for _ in 0..<2 {
                     if let randomNumber = availableNumbers.randomElement() {
-                        wrongOptions.append("Verse \(randomNumber)")
+                        if !usedNumbers.contains(randomNumber) {
+                            wrongOptions.append("Verse \(randomNumber)")
+                            usedNumbers.insert(randomNumber)
+                        } else {
+                            // Try another number
+                            let remainingNumbers = availableNumbers.subtracting(usedNumbers)
+                            if let anotherNumber = remainingNumbers.randomElement() {
+                                wrongOptions.append("Verse \(anotherNumber)")
+                                usedNumbers.insert(anotherNumber)
+                            } else {
+                                // Fallback if we run out of numbers
+                                let fallbackNumber = Int.random(in: 21...30)
+                                wrongOptions.append("Verse \(fallbackNumber)")
+                            }
+                        }
                     } else {
                         // Fallback if we run out of numbers
                         let fallbackNumber = Int.random(in: 21...30)
@@ -382,16 +397,22 @@ struct PsalmQuizView: View {
                     }
                 }
                 
-                let options = ["Verse \(verse.number)"] + wrongOptions
+                let allOptions = ["Verse \(verse.number)"] + wrongOptions
+                let uniqueOptions = Array(Set(allOptions))
                 
-                let question = QuizQuestion(
-                    type: .multipleChoice,
-                    question: "Which verse contains this phrase: \"\(verse.text.prefix(50))...\"?",
-                    correctAnswer: "Verse \(verse.number)",
-                    options: options.shuffled(),
-                    verseNumber: verse.number
-                )
-                questions.append(question)
+                // Ensure we have exactly 4 unique options
+                if uniqueOptions.count >= 4 {
+                    // Take exactly 4 options
+                    let finalOptions = Array(uniqueOptions.prefix(4))
+                    let question = QuizQuestion(
+                        type: .multipleChoice,
+                        question: "Which verse contains this phrase: \"\(verse.text.prefix(50))...\"?",
+                        correctAnswer: "Verse \(verse.number)",
+                        options: finalOptions.shuffled(),
+                        verseNumber: verse.number
+                    )
+                    questions.append(question)
+                }
             }
         }
         
