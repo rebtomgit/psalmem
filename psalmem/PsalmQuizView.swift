@@ -390,23 +390,8 @@ struct PsalmQuizView: View {
             }
         }
         
-        // Question type 3: Theme/meaning questions
-        let themeQuestions = [
-            ("What is the main theme of this psalm?", "Praise", ["Praise", "Sorrow", "Anger", "Fear"]),
-            ("What emotion does this psalm express?", "Joy", ["Joy", "Sadness", "Anger", "Confusion"]),
-            ("Who is the focus of this psalm?", "God", ["God", "Self", "Others", "Nature"])
-        ]
-        
-        for (questionText, correctAnswer, options) in themeQuestions {
-            let question = QuizQuestion(
-                type: .multipleChoice,
-                question: questionText,
-                correctAnswer: correctAnswer,
-                options: options.shuffled(),
-                verseNumber: 1
-            )
-            questions.append(question)
-        }
+        // Question type 3: Dynamic theme questions based on psalm content
+        questions.append(contentsOf: generateDynamicThemeQuestions())
         
         return questions
     }
@@ -439,6 +424,114 @@ struct PsalmQuizView: View {
         }
         
         return options.shuffled()
+    }
+    
+    private func generateDynamicThemeQuestions() -> [QuizQuestion] {
+        var questions: [QuizQuestion] = []
+        
+        // Analyze the psalm content to determine appropriate themes
+        let allText = verses.map { $0.text }.joined(separator: " ").lowercased()
+        
+        // Determine the main focus based on content analysis
+        let focus = determinePsalmFocus(allText: allText)
+        let theme = determinePsalmTheme(allText: allText)
+        let emotion = determinePsalmEmotion(allText: allText)
+        
+        // Create questions based on actual content
+        if let focus = focus {
+            let question = QuizQuestion(
+                type: .multipleChoice,
+                question: "Who is the main focus of this psalm?",
+                correctAnswer: focus.correct,
+                options: focus.options.shuffled(),
+                verseNumber: 1,
+                explanation: focus.explanation
+            )
+            questions.append(question)
+        }
+        
+        if let theme = theme {
+            let question = QuizQuestion(
+                type: .multipleChoice,
+                question: "What is the main theme of this psalm?",
+                correctAnswer: theme.correct,
+                options: theme.options.shuffled(),
+                verseNumber: 1,
+                explanation: theme.explanation
+            )
+            questions.append(question)
+        }
+        
+        if let emotion = emotion {
+            let question = QuizQuestion(
+                type: .multipleChoice,
+                question: "What emotion or attitude does this psalm express?",
+                correctAnswer: emotion.correct,
+                options: emotion.options.shuffled(),
+                verseNumber: 1,
+                explanation: emotion.explanation
+            )
+            questions.append(question)
+        }
+        
+        return questions
+    }
+    
+    private func determinePsalmFocus(allText: String) -> (correct: String, options: [String], explanation: String)? {
+        // Analyze text to determine the main focus
+        if allText.contains("blessed") && allText.contains("righteous") && allText.contains("wicked") {
+            return ("The righteous person", ["The righteous person", "God", "The wicked person", "Nature"], 
+                   "Psalm 1 focuses on contrasting the righteous person (who delights in God's law) with the wicked person (who follows the counsel of the ungodly). While God is mentioned, the main focus is on human choices and their consequences.")
+        } else if allText.contains("praise") || allText.contains("worship") {
+            return ("God", ["God", "The psalmist", "Others", "Creation"], 
+                   "This psalm is primarily focused on praising and worshiping God, with God as the central subject of the psalmist's adoration.")
+        } else if allText.contains("help") || allText.contains("deliver") {
+            return ("God", ["God", "The psalmist", "Enemies", "Others"], 
+                   "This psalm is a prayer for help and deliverance, with God as the one being appealed to for assistance.")
+        } else if allText.contains("king") || allText.contains("anointed") {
+            return ("The king/Messiah", ["The king/Messiah", "God", "The people", "Enemies"], 
+                   "This psalm focuses on the king or Messiah, with God's anointed one as the central figure.")
+        }
+        
+        return nil
+    }
+    
+    private func determinePsalmTheme(allText: String) -> (correct: String, options: [String], explanation: String)? {
+        // Analyze text to determine the main theme
+        if allText.contains("blessed") && allText.contains("righteous") {
+            return ("Righteous living", ["Righteous living", "Praise", "Prayer", "Wisdom"], 
+                   "Psalm 1's main theme is righteous living - it contrasts the blessed life of the righteous person who meditates on God's law with the way of the wicked.")
+        } else if allText.contains("praise") || allText.contains("worship") {
+            return ("Praise and worship", ["Praise and worship", "Prayer", "Thanksgiving", "Joy"], 
+                   "This psalm's main theme is praise and worship, focusing on exalting and glorifying God.")
+        } else if allText.contains("help") || allText.contains("deliver") || allText.contains("save") {
+            return ("Prayer for help", ["Prayer for help", "Praise", "Thanksgiving", "Trust"], 
+                   "This psalm's main theme is prayer for help, as the psalmist cries out to God for deliverance and assistance.")
+        } else if allText.contains("king") || allText.contains("anointed") {
+            return ("Royal/Messianic", ["Royal/Messianic", "Praise", "Prayer", "Prophecy"], 
+                   "This psalm's main theme is royal or messianic, focusing on God's anointed king and his reign.")
+        }
+        
+        return nil
+    }
+    
+    private func determinePsalmEmotion(allText: String) -> (correct: String, options: [String], explanation: String)? {
+        // Analyze text to determine the main emotion
+        if allText.contains("blessed") && allText.contains("delight") {
+            return ("Joy and contentment", ["Joy and contentment", "Sadness", "Anger", "Fear"], 
+                   "Psalm 1 expresses joy and contentment, as the righteous person is described as 'blessed' and finds delight in God's law.")
+        } else if allText.contains("praise") || allText.contains("rejoice") {
+            return ("Joy and praise", ["Joy and praise", "Sadness", "Anger", "Fear"], 
+                   "This psalm expresses joy and praise, with the psalmist rejoicing and exalting God.")
+        } else if allText.contains("help") || allText.contains("deliver") {
+            return ("Trust and hope", ["Trust and hope", "Fear", "Anger", "Despair"], 
+                   "This psalm expresses trust and hope, as the psalmist confidently looks to God for help and deliverance.")
+        } else if allText.contains("enemies") || allText.contains("wicked") {
+            return ("Trust in God's justice", ["Trust in God's justice", "Fear", "Anger", "Despair"], 
+                   "This psalm expresses trust in God's justice, believing that God will judge the wicked and vindicate the righteous.")
+        }
+        
+        return nil
     }
     
     private func generateWordOrderQuestions() -> [QuizQuestion] {
@@ -567,6 +660,16 @@ struct QuizQuestion: Equatable {
     let correctAnswer: String
     let options: [String]
     let verseNumber: Int
+    let explanation: String?
+    
+    init(type: QuizType, question: String, correctAnswer: String, options: [String], verseNumber: Int, explanation: String? = nil) {
+        self.type = type
+        self.question = question
+        self.correctAnswer = correctAnswer
+        self.options = options
+        self.verseNumber = verseNumber
+        self.explanation = explanation
+    }
     
     static func == (lhs: QuizQuestion, rhs: QuizQuestion) -> Bool {
         return lhs.type == rhs.type &&
@@ -637,7 +740,18 @@ struct MultipleChoiceQuizView: View {
                 onAnswer(isCorrect)
             }
         } message: {
-            Text(isCorrect ? "Great job!" : "The correct answer was: \(question.correctAnswer)")
+            if isCorrect {
+                Text("Great job!")
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("The correct answer was: \(question.correctAnswer)")
+                    if let explanation = question.explanation {
+                        Text(explanation)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
         }
     }
 }
