@@ -659,7 +659,7 @@ struct WordOrderQuizView: View {
                 
                 Button("Check Answer") {
                     let userAnswer = selectedWords.map { $0.word }.joined(separator: " ")
-                    isCorrect = userAnswer.lowercased() == question.correctAnswer.lowercased()
+                    isCorrect = validateWordOrderAnswer(userAnswer: userAnswer, correctAnswer: question.correctAnswer)
                     showingResult = true
                 }
                 .buttonStyle(.borderedProminent)
@@ -798,5 +798,87 @@ struct WordOrderQuizView: View {
     private func resetWords() {
         selectedWords.removeAll()
         availableWords = question.options.enumerated().map { (id: $0.offset, word: $0.element) }
+    }
+    
+    private func validateWordOrderAnswer(userAnswer: String, correctAnswer: String) -> Bool {
+        let userWords = userAnswer.lowercased().components(separatedBy: " ")
+        let correctWords = correctAnswer.lowercased().components(separatedBy: " ")
+        
+        // If exact match, return true
+        if userAnswer.lowercased() == correctAnswer.lowercased() {
+            return true
+        }
+        
+        // For repeated words, we need to check if they appear in the correct syntactical context
+        // Create a mapping of base words (without _number suffix) to their counts
+        var correctWordCounts: [String: Int] = [:]
+        var userWordCounts: [String: Int] = [:]
+        
+        // Count words in correct answer (removing _number suffixes)
+        for word in correctWords {
+            let baseWord = word.components(separatedBy: "_").first ?? word
+            correctWordCounts[baseWord, default: 0] += 1
+        }
+        
+        // Count words in user answer
+        for word in userWords {
+            userWordCounts[word, default: 0] += 1
+        }
+        
+        // Check if word counts match (this ensures repeated words are used correctly)
+        for (word, correctCount) in correctWordCounts {
+            let userCount = userWordCounts[word, default: 0]
+            if userCount != correctCount {
+                return false
+            }
+        }
+        
+        // Now check if the words are in a reasonable order
+        // We'll use a simplified approach: check if the sequence makes sense
+        var userIndex = 0
+        var correctIndex = 0
+        
+        while userIndex < userWords.count && correctIndex < correctWords.count {
+            let userWord = userWords[userIndex]
+            let correctWord = correctWords[correctIndex]
+            let correctBaseWord = correctWord.components(separatedBy: "_").first ?? correctWord
+            
+            // If words match (including repeated words), move both indices
+            if userWord == correctBaseWord {
+                userIndex += 1
+                correctIndex += 1
+                continue
+            }
+            
+            // If user word doesn't match current correct word, check if it matches a later correct word
+            // This allows for some flexibility in repeated word positioning
+            var foundMatch = false
+            var searchIndex = correctIndex + 1
+            
+            while searchIndex < correctWords.count {
+                let searchCorrectWord = correctWords[searchIndex]
+                let searchBaseWord = searchCorrectWord.components(separatedBy: "_").first ?? searchCorrectWord
+                
+                if userWord == searchBaseWord {
+                    // Found a match later in the correct sequence
+                    // This is acceptable for repeated words
+                    foundMatch = true
+                    break
+                }
+                searchIndex += 1
+            }
+            
+            if foundMatch {
+                // Skip this position in correct answer and continue with user's next word
+                correctIndex += 1
+                continue
+            }
+            
+            // If no match found, the answer is incorrect
+            return false
+        }
+        
+        // Check if we've processed all words
+        return userIndex == userWords.count && correctIndex == correctWords.count
     }
 }
