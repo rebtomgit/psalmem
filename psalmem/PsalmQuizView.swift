@@ -352,31 +352,10 @@ struct PsalmQuizView: View {
     private func generateMultipleChoiceQuestions() -> [QuizQuestion] {
         var questions: [QuizQuestion] = []
         
-        // Question type 1: Word meaning/context questions
+        // Question type 1: Meaningful action/subject questions
         for verse in verses {
-            let words = verse.text.components(separatedBy: " ")
-            if words.count > 3 {
-                // Find meaningful words (not articles, prepositions, etc.)
-                let meaningfulWords = words.filter { word in
-                    let cleanWord = word.lowercased().trimmingCharacters(in: .punctuationCharacters)
-                    return cleanWord.count > 2 && !["the", "and", "of", "in", "to", "for", "with", "by", "from", "a", "an", "is", "are", "was", "were", "be", "been", "have", "has", "had"].contains(cleanWord)
-                }
-                
-                if let targetWord = meaningfulWords.randomElement() {
-                    let options = generateContextualOptions(correctWord: targetWord, allVerses: verses)
-                    // Ensure no duplicates
-                    let uniqueOptions = Array(Set(options))
-                    if uniqueOptions.count >= 4 {
-                        let question = QuizQuestion(
-                            type: .multipleChoice,
-                            question: "What is the main action or subject in verse \(verse.number)?",
-                            correctAnswer: targetWord,
-                            options: uniqueOptions.shuffled(),
-                            verseNumber: verse.number
-                        )
-                        questions.append(question)
-                    }
-                }
+            if let actionQuestion = generateActionSubjectQuestion(for: verse) {
+                questions.append(actionQuestion)
             }
         }
         
@@ -450,6 +429,105 @@ struct PsalmQuizView: View {
         }
         
         return options.shuffled()
+    }
+    
+    private func generateActionSubjectQuestion(for verse: Verse) -> QuizQuestion? {
+        let text = verse.text.lowercased()
+        
+        // Analyze the verse to determine the main action or subject
+        var correctAnswer = ""
+        var explanation = ""
+        
+        // Check for specific patterns in Psalm 1
+        if verse.number == 1 {
+            if text.contains("blessed") {
+                correctAnswer = "The righteous person is blessed"
+                explanation = "Verse 1 focuses on the blessed state of the righteous person who avoids the counsel of the wicked."
+            }
+        } else if verse.number == 2 {
+            if text.contains("delight") && text.contains("law") {
+                correctAnswer = "The righteous person delights in God's law"
+                explanation = "Verse 2 describes the righteous person's attitude toward God's law - they find delight in it and meditate on it."
+            }
+        } else if verse.number == 3 {
+            if text.contains("like") && text.contains("tree") {
+                correctAnswer = "The righteous person is like a fruitful tree"
+                explanation = "Verse 3 uses the metaphor of a tree planted by rivers of water to describe the stability and fruitfulness of the righteous person."
+            }
+        } else if verse.number == 4 {
+            if text.contains("ungodly") && text.contains("chaff") {
+                correctAnswer = "The wicked are like chaff"
+                explanation = "Verse 4 contrasts the wicked with the righteous, describing them as chaff that the wind drives away."
+            }
+        } else if verse.number == 5 {
+            if text.contains("stand") && text.contains("judgment") {
+                correctAnswer = "The wicked will not stand in judgment"
+                explanation = "Verse 5 states that the wicked will not be able to stand in the judgment or in the congregation of the righteous."
+            }
+        } else if verse.number == 6 {
+            if text.contains("knoweth") && text.contains("way") {
+                correctAnswer = "The LORD knows the way of the righteous"
+                explanation = "Verse 6 reveals that the LORD knows (observes and approves) the way of the righteous, while the way of the wicked will perish."
+            }
+        }
+        
+        // If we found a meaningful answer, create the question
+        if !correctAnswer.isEmpty {
+            let wrongOptions = generateMeaningfulWrongOptions(for: verse, correctAnswer: correctAnswer)
+            let allOptions = [correctAnswer] + wrongOptions
+            let uniqueOptions = Array(Set(allOptions))
+            
+            if uniqueOptions.count >= 4 {
+                return QuizQuestion(
+                    type: .multipleChoice,
+                    question: "What is the main action or subject in verse \(verse.number)?",
+                    correctAnswer: correctAnswer,
+                    options: uniqueOptions.shuffled(),
+                    verseNumber: verse.number,
+                    explanation: explanation
+                )
+            }
+        }
+        
+        return nil
+    }
+    
+    private func generateMeaningfulWrongOptions(for verse: Verse, correctAnswer: String) -> [String] {
+        var wrongOptions: [String] = []
+        
+        // Generate contextually appropriate wrong options based on the verse
+        let text = verse.text.lowercased()
+        
+        if text.contains("blessed") {
+            wrongOptions.append("The wicked person is blessed")
+        }
+        if text.contains("delight") {
+            wrongOptions.append("The righteous person avoids God's law")
+        }
+        if text.contains("tree") {
+            wrongOptions.append("The righteous person is like a withered plant")
+        }
+        if text.contains("chaff") {
+            wrongOptions.append("The wicked are like strong trees")
+        }
+        if text.contains("judgment") {
+            wrongOptions.append("The wicked will prosper in judgment")
+        }
+        if text.contains("knoweth") {
+            wrongOptions.append("The LORD does not know the way of the righteous")
+        }
+        
+        // Add some general wrong options
+        let generalWrongOptions = [
+            "The righteous person will perish",
+            "The wicked person will prosper",
+            "God does not care about human choices",
+            "There is no difference between righteous and wicked"
+        ]
+        
+        wrongOptions.append(contentsOf: generalWrongOptions)
+        
+        return wrongOptions
     }
     
     private func generateDynamicThemeQuestions() -> [QuizQuestion] {
