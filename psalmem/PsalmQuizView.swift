@@ -298,11 +298,30 @@ struct PsalmQuizView: View {
                 var displayWords = words
                 displayWords[randomIndex] = "_____"
                 
+                // Generate wrong options from other verses
+                var wrongOptions: [String] = []
+                for otherVerse in verses where otherVerse.number != verse.number {
+                    let otherWords = otherVerse.text.components(separatedBy: " ")
+                    if let randomWord = otherWords.randomElement() {
+                        wrongOptions.append(randomWord)
+                    }
+                }
+                
+                // Add some common words as additional wrong options
+                let commonWords = ["the", "and", "of", "in", "to", "for", "with", "by", "from", "that", "this", "is", "are", "was", "were", "be", "been", "have", "has", "had", "will", "shall", "can", "may", "must", "should", "would", "could", "might"]
+                for word in commonWords.shuffled().prefix(2) {
+                    if !wrongOptions.contains(word) && word != correctWord {
+                        wrongOptions.append(word)
+                    }
+                }
+                
+                let options = [correctWord] + Array(wrongOptions.prefix(3))
+                
                 let question = QuizQuestion(
                     type: .fillInTheBlank,
                     question: "Complete the verse: \(displayWords.joined(separator: " "))",
                     correctAnswer: correctWord,
-                    options: [correctWord],
+                    options: options.shuffled(),
                     verseNumber: verse.number
                 )
                 questions.append(question)
