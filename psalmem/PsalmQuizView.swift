@@ -64,7 +64,7 @@ struct PsalmQuizView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .presentationDetents([.large])
+        .presentationDetents([.large, .height(800)])
         .presentationDragIndicator(.visible)
     }
     
@@ -695,7 +695,7 @@ struct WordOrderQuizView: View {
         ZStack {
             // Main content
             ScrollView {
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     selectedWordsSection
                     availableWordsSection
                     actionButtonsSection
@@ -710,11 +710,14 @@ struct WordOrderQuizView: View {
                     
                     // Add extra space when feedback is showing to prevent overlap
                     if showingResult {
-                        Spacer(minLength: 300)
+                        Spacer(minLength: 400)
                     }
+                    
+                    // Always add some bottom padding to ensure submit button is visible
+                    Spacer(minLength: 100)
                 }
-                .padding(.vertical, 6)
-                .padding(.bottom, 12)
+                .padding(.vertical, 4)
+                .padding(.bottom, 8)
             }
             .frame(maxHeight: .infinity)
             
