@@ -640,23 +640,13 @@ struct WordOrderQuizView: View {
     
     private var actionButtonsSection: some View {
         VStack(spacing: 6) {
-            HStack(spacing: 15) {
-                Button("Clear All") {
-                    availableWords.append(contentsOf: selectedWords)
-                    selectedWords.removeAll()
-                }
-                .buttonStyle(.bordered)
-                .font(.body)
-                
-                Button("Check Answer") {
-                    let userAnswer = selectedWords.map { $0.word }.joined(separator: " ")
-                    isCorrect = validateWordOrderAnswer(userAnswer: userAnswer, correctAnswer: question.correctAnswer)
-                    showingResult = true
-                }
-                .buttonStyle(.borderedProminent)
-                .font(.body)
-                .disabled(selectedWords.isEmpty)
+            Button("Clear All") {
+                availableWords.append(contentsOf: selectedWords)
+                selectedWords.removeAll()
             }
+            .buttonStyle(.bordered)
+            .font(.body)
+            .frame(maxWidth: .infinity)
             
             if !selectedWords.isEmpty {
                 Text("Tap any word above to remove it")
@@ -700,11 +690,6 @@ struct WordOrderQuizView: View {
                     selectedWordsSection
                     availableWordsSection
                     actionButtonsSection
-                    
-                    // Show correct answer for comparison
-                    if !selectedWords.isEmpty {
-                        correctAnswerSection
-                    }
                     
                     // Extra padding to ensure submit button is visible
                     Spacer(minLength: 20)
