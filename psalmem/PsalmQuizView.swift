@@ -351,23 +351,13 @@ struct PsalmQuizView: View {
         for verse in verses {
             let words = verse.text.components(separatedBy: " ")
             if words.count > 4 {
-                // Create unique words by adding index to duplicates
-                var uniqueWords: [String] = []
-                var wordCounts: [String: Int] = [:]
-                
-                for word in words {
-                    let count = wordCounts[word, default: 0] + 1
-                    wordCounts[word] = count
-                    let uniqueWord = count > 1 ? "\(word)_\(count)" : word
-                    uniqueWords.append(uniqueWord)
-                }
-                
-                let shuffledWords = uniqueWords.shuffled()
+                // Use original words without numbering for more flexible validation
+                let shuffledWords = words.shuffled()
                 
                 let question = QuizQuestion(
                     type: .wordOrder,
                     question: "Arrange these words in the correct order for verse \(verse.number):",
-                    correctAnswer: uniqueWords.joined(separator: " "),
+                    correctAnswer: words.joined(separator: " "),
                     options: shuffledWords,
                     verseNumber: verse.number
                 )
@@ -720,7 +710,7 @@ struct WordOrderQuizView: View {
                     
                     // Add extra space when feedback is showing to prevent overlap
                     if showingResult {
-                        Spacer(minLength: 200)
+                        Spacer(minLength: 300)
                     }
                 }
                 .padding(.vertical, 6)
@@ -810,14 +800,13 @@ struct WordOrderQuizView: View {
         }
         
         // For repeated words, we need to check if they appear in the correct syntactical context
-        // Create a mapping of base words (without _number suffix) to their counts
+        // Create a mapping of words to their counts
         var correctWordCounts: [String: Int] = [:]
         var userWordCounts: [String: Int] = [:]
         
-        // Count words in correct answer (removing _number suffixes)
+        // Count words in correct answer
         for word in correctWords {
-            let baseWord = word.components(separatedBy: "_").first ?? word
-            correctWordCounts[baseWord, default: 0] += 1
+            correctWordCounts[word, default: 0] += 1
         }
         
         // Count words in user answer
@@ -841,10 +830,9 @@ struct WordOrderQuizView: View {
         while userIndex < userWords.count && correctIndex < correctWords.count {
             let userWord = userWords[userIndex]
             let correctWord = correctWords[correctIndex]
-            let correctBaseWord = correctWord.components(separatedBy: "_").first ?? correctWord
             
-            // If words match (including repeated words), move both indices
-            if userWord == correctBaseWord {
+            // If words match exactly, move both indices
+            if userWord == correctWord {
                 userIndex += 1
                 correctIndex += 1
                 continue
@@ -857,9 +845,8 @@ struct WordOrderQuizView: View {
             
             while searchIndex < correctWords.count {
                 let searchCorrectWord = correctWords[searchIndex]
-                let searchBaseWord = searchCorrectWord.components(separatedBy: "_").first ?? searchCorrectWord
                 
-                if userWord == searchBaseWord {
+                if userWord == searchCorrectWord {
                     // Found a match later in the correct sequence
                     // This is acceptable for repeated words
                     foundMatch = true
