@@ -64,8 +64,9 @@ struct PsalmQuizView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .presentationDetents([.large, .height(900)])
+        .presentationDetents([.large, .height(1200)])
         .presentationDragIndicator(.visible)
+        .frame(minWidth: 600, minHeight: 800)
     }
     
     private var quizTypeSelectionView: some View {
@@ -570,7 +571,7 @@ struct WordOrderQuizView: View {
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(10)
             } else {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 6) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
                     ForEach(selectedWords, id: \.id) { item in
                         Button(action: {
                             // Remove word from selected and put back in available
@@ -610,7 +611,7 @@ struct WordOrderQuizView: View {
                 .font(.headline)
                 .foregroundColor(.primary)
             
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 6) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 10) {
                 ForEach(availableWords, id: \.id) { item in
                     Button(action: {
                         if let index = availableWords.firstIndex(where: { $0.id == item.id }) {
