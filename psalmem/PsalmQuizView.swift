@@ -703,16 +703,26 @@ struct PsalmQuizView: View {
                 
                 // Generate plausible wrong options
                 let wrongOptions = generateVerseCompletionWrongOptions(for: verse, correctAnswer: secondHalf)
-                let allOptions = [secondHalf] + wrongOptions
+                
+                // Ensure the correct answer is always included
+                var allOptions = [secondHalf]
+                allOptions.append(contentsOf: wrongOptions)
+                
+                // Remove duplicates and ensure we have the correct answer
                 let uniqueOptions = Array(Set(allOptions))
                 
-                // Ensure we have at least 4 unique options
-                if uniqueOptions.count >= 4 {
-                    let finalOptions = Array(uniqueOptions.prefix(4))
+                // Ensure we have at least 4 unique options including the correct answer
+                if uniqueOptions.count >= 4 && uniqueOptions.contains(secondHalf) {
+                    // Take the correct answer plus 3 wrong options
+                    let correctAnswer = secondHalf
+                    let availableWrongOptions = uniqueOptions.filter { $0 != correctAnswer }
+                    let selectedWrongOptions = Array(availableWrongOptions.prefix(3))
+                    let finalOptions = [correctAnswer] + selectedWrongOptions
+                    
                     let question = QuizQuestion(
                         type: .verseCompletion,
                         question: "Complete verse \(verse.number): \(firstHalf) _____",
-                        correctAnswer: secondHalf,
+                        correctAnswer: correctAnswer,
                         options: finalOptions.shuffled(),
                         verseNumber: verse.number
                     )
@@ -728,27 +738,32 @@ struct PsalmQuizView: View {
         var wrongOptions: [String] = []
         let text = verse.text.lowercased()
         
-        // Generate contextually appropriate wrong completions
+        // Generate contextually appropriate wrong completions based on verse content
         if text.contains("delight") && text.contains("law") {
-            wrongOptions.append("and he shall prosper in all his ways")
-            wrongOptions.append("and his enemies shall be scattered")
-            wrongOptions.append("and the LORD shall bless him")
+            // Verse 2: "But his delight is in the law of the LORD; and in his law doth he meditate day and night."
+            wrongOptions.append("and in his law doth he meditate day and night")
+            wrongOptions.append("and he shall meditate on it day and night")
+            wrongOptions.append("and he shall study it continually")
         } else if text.contains("like") && text.contains("tree") {
-            wrongOptions.append("and his fruit shall wither away")
-            wrongOptions.append("and he shall be cut down")
-            wrongOptions.append("and his leaves shall fall")
+            // Verse 3: "And he shall be like a tree planted by the rivers of water, that bringeth forth his fruit in his season; his leaf also shall not wither; and whatsoever he doeth shall prosper."
+            wrongOptions.append("that bringeth forth his fruit in his season; his leaf also shall not wither; and whatsoever he doeth shall prosper")
+            wrongOptions.append("that bringeth forth his fruit in his season")
+            wrongOptions.append("and whatsoever he doeth shall prosper")
         } else if text.contains("ungodly") && text.contains("chaff") {
-            wrongOptions.append("and they shall stand in judgment")
-            wrongOptions.append("and they shall be blessed")
-            wrongOptions.append("and they shall prosper")
+            // Verse 4: "The ungodly are not so: but are like the chaff which the wind driveth away."
+            wrongOptions.append("but are like the chaff which the wind driveth away")
+            wrongOptions.append("like the chaff which the wind driveth away")
+            wrongOptions.append("and the wind shall drive them away")
         } else if text.contains("stand") && text.contains("judgment") {
-            wrongOptions.append("and they shall be justified")
-            wrongOptions.append("and they shall be blessed")
-            wrongOptions.append("and they shall be exalted")
+            // Verse 5: "Therefore the ungodly shall not stand in the judgment, nor sinners in the congregation of the righteous."
+            wrongOptions.append("judgment, nor sinners in the congregation of the righteous")
+            wrongOptions.append("congregation of the righteous")
+            wrongOptions.append("assembly of the saints")
         } else if text.contains("knoweth") && text.contains("way") {
-            wrongOptions.append("and the wicked shall prosper")
-            wrongOptions.append("and all ways are equal")
-            wrongOptions.append("and man chooses his own path")
+            // Verse 6: "For the LORD knoweth the way of the righteous: but the way of the ungodly shall perish."
+            wrongOptions.append("but the way of the ungodly shall perish")
+            wrongOptions.append("and the way of the ungodly shall perish")
+            wrongOptions.append("and the wicked shall be destroyed")
         }
         
         // Add some general wrong options based on common biblical phrases
