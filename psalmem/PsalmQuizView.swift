@@ -64,7 +64,7 @@ struct PsalmQuizView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .presentationDetents([.large, .height(800)])
+        .presentationDetents([.large, .height(900)])
         .presentationDragIndicator(.visible)
     }
     
@@ -712,6 +712,24 @@ struct WordOrderQuizView: View {
                 .padding(.bottom, 8)
             }
             .frame(maxHeight: showingResult ? .infinity : .infinity)
+            
+            // Always visible submit button section
+            VStack(spacing: 8) {
+                Divider()
+                
+                Button("Check Answer") {
+                    let userAnswer = selectedWords.map { $0.word }.joined(separator: " ")
+                    let isCorrect = validateWordOrderAnswer(userAnswer: userAnswer, correctAnswer: question.correctAnswer)
+                    showingResult = true
+                    self.isCorrect = isCorrect
+                }
+                .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity)
+                .disabled(selectedWords.isEmpty)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+            }
+            .background(Color(.systemBackground))
             
             // Feedback section - only appears when needed
             if showingResult {
