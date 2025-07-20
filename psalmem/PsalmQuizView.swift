@@ -701,18 +701,71 @@ struct PsalmQuizView: View {
                 let firstHalf = words[0..<halfLength].joined(separator: " ")
                 let secondHalf = words[halfLength...].joined(separator: " ")
                 
-                let question = QuizQuestion(
-                    type: .verseCompletion,
-                    question: "Complete verse \(verse.number): \(firstHalf) _____",
-                    correctAnswer: secondHalf,
-                    options: [secondHalf],
-                    verseNumber: verse.number
-                )
-                questions.append(question)
+                // Generate plausible wrong options
+                let wrongOptions = generateVerseCompletionWrongOptions(for: verse, correctAnswer: secondHalf)
+                let allOptions = [secondHalf] + wrongOptions
+                let uniqueOptions = Array(Set(allOptions))
+                
+                // Ensure we have at least 4 unique options
+                if uniqueOptions.count >= 4 {
+                    let finalOptions = Array(uniqueOptions.prefix(4))
+                    let question = QuizQuestion(
+                        type: .verseCompletion,
+                        question: "Complete verse \(verse.number): \(firstHalf) _____",
+                        correctAnswer: secondHalf,
+                        options: finalOptions.shuffled(),
+                        verseNumber: verse.number
+                    )
+                    questions.append(question)
+                }
             }
         }
         
         return questions
+    }
+    
+    private func generateVerseCompletionWrongOptions(for verse: Verse, correctAnswer: String) -> [String] {
+        var wrongOptions: [String] = []
+        let text = verse.text.lowercased()
+        
+        // Generate contextually appropriate wrong completions
+        if text.contains("delight") && text.contains("law") {
+            wrongOptions.append("and he shall prosper in all his ways")
+            wrongOptions.append("and his enemies shall be scattered")
+            wrongOptions.append("and the LORD shall bless him")
+        } else if text.contains("like") && text.contains("tree") {
+            wrongOptions.append("and his fruit shall wither away")
+            wrongOptions.append("and he shall be cut down")
+            wrongOptions.append("and his leaves shall fall")
+        } else if text.contains("ungodly") && text.contains("chaff") {
+            wrongOptions.append("and they shall stand in judgment")
+            wrongOptions.append("and they shall be blessed")
+            wrongOptions.append("and they shall prosper")
+        } else if text.contains("stand") && text.contains("judgment") {
+            wrongOptions.append("and they shall be justified")
+            wrongOptions.append("and they shall be blessed")
+            wrongOptions.append("and they shall be exalted")
+        } else if text.contains("knoweth") && text.contains("way") {
+            wrongOptions.append("and the wicked shall prosper")
+            wrongOptions.append("and all ways are equal")
+            wrongOptions.append("and man chooses his own path")
+        }
+        
+        // Add some general wrong options based on common biblical phrases
+        let generalWrongOptions = [
+            "and he shall be blessed forever",
+            "and the LORD shall deliver him",
+            "and his enemies shall perish",
+            "and he shall dwell in safety",
+            "and the LORD shall protect him",
+            "and he shall find favor",
+            "and his prayers shall be answered",
+            "and he shall be exalted"
+        ]
+        
+        wrongOptions.append(contentsOf: generalWrongOptions)
+        
+        return wrongOptions
     }
     
     private func generateMixedQuestions() -> [QuizQuestion] {
