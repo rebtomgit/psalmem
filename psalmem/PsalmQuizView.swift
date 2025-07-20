@@ -303,19 +303,37 @@ struct PsalmQuizView: View {
                 for otherVerse in verses where otherVerse.number != verse.number {
                     let otherWords = otherVerse.text.components(separatedBy: " ")
                     if let randomWord = otherWords.randomElement() {
-                        wrongOptions.append(randomWord)
+                        if randomWord != correctWord && !wrongOptions.contains(randomWord) {
+                            wrongOptions.append(randomWord)
+                        }
                     }
                 }
                 
-                // Add some common words as additional wrong options
-                let commonWords = ["the", "and", "of", "in", "to", "for", "with", "by", "from", "that", "this", "is", "are", "was", "were", "be", "been", "have", "has", "had", "will", "shall", "can", "may", "must", "should", "would", "could", "might"]
-                for word in commonWords.shuffled().prefix(2) {
-                    if !wrongOptions.contains(word) && word != correctWord {
+                // Add contextually similar words as additional wrong options
+                let similarWords = ["the", "his", "her", "their", "our", "my", "your", "its", "this", "that", "these", "those", "a", "an", "some", "any", "all", "each", "every", "many", "few", "several", "both", "either", "neither"]
+                for word in similarWords.shuffled() {
+                    if word != correctWord && !wrongOptions.contains(word) && wrongOptions.count < 3 {
                         wrongOptions.append(word)
                     }
                 }
                 
-                let options = [correctWord] + Array(wrongOptions.prefix(3))
+                // Ensure we have exactly 3 unique wrong options
+                while wrongOptions.count < 3 {
+                    let fallbackWords = ["and", "of", "in", "to", "for", "with", "by", "from", "is", "are", "was", "were", "be", "been", "have", "has", "had"]
+                    for word in fallbackWords.shuffled() {
+                        if word != correctWord && !wrongOptions.contains(word) && wrongOptions.count < 3 {
+                            wrongOptions.append(word)
+                            break
+                        }
+                    }
+                    // Prevent infinite loop
+                    if wrongOptions.count < 3 {
+                        wrongOptions.append("the")
+                        break
+                    }
+                }
+                
+                let options = [correctWord] + wrongOptions
                 
                 let question = QuizQuestion(
                     type: .fillInTheBlank,
