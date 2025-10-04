@@ -134,11 +134,57 @@ struct MemoryAssessmentView: View {
                 .padding(.horizontal)
             }
             
-            Button("Continue to Psalms") {
-                saveUserAndResults()
-                dismiss()
+            VStack(spacing: 20) {
+                Text("Assessment Complete! 🎉")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.green)
+                
+                Text("Ready to start memorizing Psalms?")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                
+                VStack(spacing: 12) {
+                    Button(action: {
+                        saveUserAndResults()
+                        dismiss()
+                    }) {
+                        HStack {
+                            Image(systemName: "book.fill")
+                            Text("Start Memorizing Psalms")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .cornerRadius(12)
+                    }
+                    
+                    Button(action: {
+                        saveUserAndResults()
+                        dismiss()
+                    }) {
+                        HStack {
+                            Image(systemName: "chart.bar.fill")
+                            Text("View Progress Dashboard")
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(12)
+                    }
+                }
+                .padding(.horizontal)
+                
+                Text("Your memory assessment is complete. You can now begin memorizing Psalms with personalized recommendations based on your strengths.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
             }
-            .buttonStyle(.borderedProminent)
             .padding()
         }
     }
