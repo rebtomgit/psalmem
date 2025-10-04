@@ -4,6 +4,7 @@ import SwiftData
 struct PsalmQuizView: View {
     let psalm: Psalm
     let translation: Translation
+    let selectedVerses: Set<Int>
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var allVerses: [Verse]
@@ -19,7 +20,15 @@ struct PsalmQuizView: View {
     @State private var showingQuizTypeSelection = true
     
     private var verses: [Verse] {
-        allVerses.filter { $0.psalm?.id == psalm.id && $0.translation?.id == translation.id }.sorted { $0.number < $1.number }
+        let allPsalmVerses = allVerses.filter { $0.psalm?.id == psalm.id && $0.translation?.id == translation.id }.sorted { $0.number < $1.number }
+        
+        // If no verses are selected, use all verses
+        if selectedVerses.isEmpty {
+            return allPsalmVerses
+        }
+        
+        // Otherwise, use only selected verses
+        return allPsalmVerses.filter { selectedVerses.contains($0.number) }
     }
     
     private var user: User? {
@@ -75,10 +84,30 @@ struct PsalmQuizView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
             
-            Text("Select how you want to practice memorizing Psalm \(psalm.number)")
-                .font(.headline)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
+            VStack(spacing: 8) {
+                Text("Select how you want to practice memorizing Psalm \(psalm.number)")
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+                
+                if selectedVerses.isEmpty {
+                    Text("Quiz will include all \(verses.count) verses")
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+                } else {
+                    Text("Quiz will include \(verses.count) selected verses: \(selectedVerses.sorted().map(String.init).joined(separator: ", "))")
+                        .font(.subheadline)
+                        .foregroundColor(.green)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(Color.green.opacity(0.1))
+                        .cornerRadius(8)
+                }
+            }
             
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 20) {
                 ForEach(QuizType.allCases, id: \.self) { quizType in

@@ -50,7 +50,7 @@ struct MainNavigationView: View {
         }
         .sheet(isPresented: $showingQuiz) {
             if let psalm = selectedPsalm, let translation = selectedTranslation {
-                PsalmQuizView(psalm: psalm, translation: translation)
+                PsalmQuizView(psalm: psalm, translation: translation, selectedVerses: selectedVerses)
             }
         }
         .sheet(isPresented: $showingDiagnostics) {
