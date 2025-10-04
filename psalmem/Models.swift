@@ -266,7 +266,6 @@ enum MemoryWeakness: String, CaseIterable, Codable {
 
 enum TestType: String, CaseIterable, Codable {
     case visual = "Visual Memory"
-    case auditory = "Auditory Memory"
     case pattern = "Pattern Recognition"
     case sequence = "Sequence Memory"
     case spatial = "Spatial Memory"

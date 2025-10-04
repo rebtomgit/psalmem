@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import AVFoundation
 
 struct MemoryAssessmentView: View {
     @Environment(\.modelContext) private var modelContext
@@ -81,11 +80,6 @@ struct MemoryAssessmentView: View {
             case .visual:
                 VisualMemoryTest { score in
                     testResults[.visual] = score
-                    nextTest()
-                }
-            case .auditory:
-                AuditoryMemoryTest { score in
-                    testResults[.auditory] = score
                     nextTest()
                 }
             case .pattern:
@@ -308,105 +302,6 @@ struct VisualMemoryTest: View {
     }
 }
 
-struct AuditoryMemoryTest: View {
-    let onComplete: (Double) -> Void
-    @State private var testPhase: TestPhase = .instructions
-    @State private var userInput = ""
-    @State private var correctSequence = "3-7-1-9"
-    @State private var audioPlayer: AVAudioPlayer?
-    
-    enum TestPhase {
-        case instructions, playing, input
-    }
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            switch testPhase {
-            case .instructions:
-                VStack(spacing: 15) {
-                    Text("Auditory Memory Test")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
-                    Text("You will hear a sequence of numbers. Listen carefully and remember the order, then enter the numbers you heard.")
-                        .font(.body)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                    
-                    Button("Play Sequence") {
-                        testPhase = .playing
-                        playSequence()
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                
-            case .playing:
-                VStack(spacing: 15) {
-                    Text("Listening to sequence...")
-                        .font(.headline)
-                    
-                    ProgressView()
-                        .scaleEffect(1.5)
-                    
-                    Text("Make sure your device volume is turned on")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-            case .input:
-                VStack(spacing: 15) {
-                    Text("Enter the sequence you heard:")
-                        .font(.headline)
-                    
-                    TextField("e.g., 3-7-1-9", text: $userInput)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding(.horizontal)
-#if os(iOS)
-                        .keyboardType(.numberPad)
-#endif
-                    
-                    Text("Format: numbers separated by hyphens")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Button("Submit") {
-                        let score = userInput == correctSequence ? 1.0 : 0.0
-                        onComplete(score)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(userInput.isEmpty)
-                }
-            }
-        }
-        .padding()
-    }
-    
-    private func playSequence() {
-        // Create audio sequence using system sounds
-        let numbers = correctSequence.components(separatedBy: "-")
-        var delay: TimeInterval = 0
-        
-        for (_, number) in numbers.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                // Use system sound for number
-                AudioServicesPlaySystemSound(1103) // System sound
-                
-                // Also speak the number
-                let utterance = AVSpeechUtterance(string: number)
-                utterance.rate = 0.5
-                utterance.volume = 1.0
-                let synthesizer = AVSpeechSynthesizer()
-                synthesizer.speak(utterance)
-            }
-            delay += 1.5 // 1.5 seconds between numbers
-        }
-        
-        // Switch to input phase after sequence
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            testPhase = .input
-        }
-    }
-}
 
 struct PatternMemoryTest: View {
     let onComplete: (Double) -> Void
