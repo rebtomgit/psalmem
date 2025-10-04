@@ -159,6 +159,31 @@ struct MainNavigationView: View {
     }
     
     private var mainContentView: some View {
+        TabView {
+            // Memorization Tab
+            memorizationTab
+                .tabItem {
+                    Image(systemName: "book.fill")
+                    Text("Memorize")
+                }
+            
+            // Progress Tab
+            ProgressOverviewView()
+                .tabItem {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                    Text("Progress")
+                }
+            
+            // Settings Tab
+            settingsTab
+                .tabItem {
+                    Image(systemName: "gear")
+                    Text("Settings")
+                }
+        }
+    }
+    
+    private var memorizationTab: some View {
         VStack(spacing: 20) {
             if let psalm = selectedPsalm, let translation = selectedTranslation {
                 VStack(alignment: .leading, spacing: 8) {
@@ -247,6 +272,66 @@ struct MainNavigationView: View {
                 .buttonStyle(.bordered)
             }
             .padding(.top)
+        }
+        .padding()
+    }
+    
+    private var settingsTab: some View {
+        VStack(spacing: 20) {
+            Text("Settings")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+            
+            VStack(spacing: 16) {
+                // User info
+                if let user = currentUser {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("User Profile")
+                            .font(.headline)
+                        
+                        Text("Name: \(user.name)")
+                            .font(.subheadline)
+                        
+                        Text("Memory Strengths: \(user.memoryStrengths.map { $0.rawValue }.joined(separator: ", "))")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(12)
+                }
+                
+                // App info
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("App Information")
+                        .font(.headline)
+                    
+                    Text("Version: 2.0")
+                        .font(.subheadline)
+                    
+                    Text("PsalmMem - Memorize the Psalms")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(12)
+                
+                // Action buttons
+                VStack(spacing: 12) {
+                    Button("Reset Sample Data") {
+                        resetSampleData()
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
+                    
+                    Button("View Diagnostics") {
+                        showingDiagnostics = true
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
+                }
+            }
         }
         .padding()
     }

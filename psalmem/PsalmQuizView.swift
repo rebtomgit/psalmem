@@ -805,13 +805,38 @@ struct PsalmQuizView: View {
         let allProgress = try? modelContext.fetch(FetchDescriptor<Progress>())
         let existingProgress = allProgress?.first(where: { $0.psalm?.id == psalm.id && $0.user?.id == user.id && $0.translation?.id == translation.id })
         
-        if let progressObj = existingProgress {
-            progressObj.overallProgress = max(progressObj.overallProgress, progress)
-            progressObj.lastPracticed = Date()
+        let progressObj: Progress
+        if let existing = existingProgress {
+            progressObj = existing
         } else {
-            let newProgress = Progress(psalm: psalm, user: user, translation: translation)
-            newProgress.overallProgress = progress
-            modelContext.insert(newProgress)
+            progressObj = Progress(psalm: psalm, user: user, translation: translation)
+            modelContext.insert(progressObj)
+        }
+        
+        // Update progress with detailed tracking
+        progressObj.overallProgress = max(progressObj.overallProgress, progress)
+        progressObj.lastPracticed = Date()
+        
+        // Update quiz statistics
+        progressObj.correctAnswers += currentScore
+        progressObj.totalAnswers += totalQuestions
+        
+        // Calculate time spent (simplified - could be enhanced with actual timing)
+        let estimatedTimeSpent = totalQuestions * 30 // 30 seconds per question estimate
+        progressObj.addQuizScore(score: progress * 100, timeSpent: estimatedTimeSpent)
+        
+        // Update streak
+        progressObj.updateStreak()
+        
+        // Update memorization level based on progress
+        if progress >= 0.9 {
+            // Mark all verses as memorized if score is very high
+            let allVerseNumbers = verses.map { $0.number }
+            progressObj.memorizedVerses = Array(Set(progressObj.memorizedVerses + allVerseNumbers))
+        } else if progress >= 0.7 {
+            // Mark some verses as memorized based on performance
+            let versesToMemorize = verses.prefix(Int(Double(verses.count) * progress)).map { $0.number }
+            progressObj.memorizedVerses = Array(Set(progressObj.memorizedVerses + versesToMemorize))
         }
         
         try? modelContext.save()

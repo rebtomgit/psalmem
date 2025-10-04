@@ -18,6 +18,7 @@ struct psalmemApp: App {
             Translation.self,
             MemoryTest.self,
             Progress.self,
+            QuizScore.self,
             Item.self
         ])
         
