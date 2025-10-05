@@ -244,10 +244,7 @@ struct DiagnosticView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 20) {
-                    // Header
-                    headerSection
-                    
+                VStack(spacing: 16) {
                     // Progress Overview
                     progressOverviewSection
                     
@@ -261,9 +258,11 @@ struct DiagnosticView: View {
                     diagnosticToolsSection
                     
                     // Extra padding at bottom to ensure all content is accessible
-                    Spacer(minLength: 50)
+                    Spacer(minLength: 30)
                 }
-                .padding()
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
             }
             .scrollIndicators(.visible)
             .navigationTitle("Diagnostics & Progress")
@@ -296,13 +295,29 @@ struct DiagnosticView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .padding()
+        .padding(12)
         .background(Color.blue.opacity(0.1))
         .cornerRadius(12)
     }
     
     private var progressOverviewSection: some View {
         VStack(alignment: .leading, spacing: 15) {
+            // Compact user info header
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    if let user = currentUser {
+                        Text("User: \(user.name)")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                    }
+                    Text("App Version: \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.bottom, 8)
+            
             Text("Progress Overview")
                 .font(.title2)
                 .fontWeight(.bold)
@@ -340,14 +355,14 @@ struct DiagnosticView: View {
                 )
             }
         }
-        .padding()
+        .padding(12)
         .background(Color.white)
         .cornerRadius(12)
         .shadow(radius: 2)
     }
     
     private var userProgressSection: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("User Progress Details")
                 .font(.title2)
                 .fontWeight(.bold)
@@ -367,14 +382,14 @@ struct DiagnosticView: View {
                 }
             }
         }
-        .padding()
+        .padding(12)
         .background(Color.white)
         .cornerRadius(12)
         .shadow(radius: 2)
     }
     
     private var quizPerformanceSection: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Quiz Performance")
                 .font(.title2)
                 .fontWeight(.bold)
@@ -413,14 +428,14 @@ struct DiagnosticView: View {
                 }
             }
         }
-        .padding()
+        .padding(12)
         .background(Color.white)
         .cornerRadius(12)
         .shadow(radius: 2)
     }
     
     private var diagnosticToolsSection: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Diagnostic Tools")
                 .font(.title2)
                 .fontWeight(.bold)
@@ -454,7 +469,7 @@ struct DiagnosticView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .padding()
+        .padding(12)
         .background(Color.white)
         .cornerRadius(12)
         .shadow(radius: 2)
