@@ -313,6 +313,21 @@ struct PsalmQuizView: View {
             questions = generateMixedQuestions()
         }
         
+        // Ensure we have a minimum number of questions
+        if questions.isEmpty {
+            // If no questions were generated, create a fallback question
+            if let firstVerse = verses.first {
+                let fallbackQuestion = QuizQuestion(
+                    type: selectedQuizType,
+                    question: "What is the main theme of verse \(firstVerse.number)?",
+                    correctAnswer: "God's word",
+                    options: ["God's word", "Human wisdom", "Worldly success", "Personal gain"],
+                    verseNumber: firstVerse.number
+                )
+                questions.append(fallbackQuestion)
+            }
+        }
+        
         return questions.shuffled()
     }
     
@@ -322,56 +337,68 @@ struct PsalmQuizView: View {
         for verse in verses {
             let words = verse.text.components(separatedBy: " ")
             if words.count > 3 {
-                let randomIndex = Int.random(in: 0..<words.count)
-                let correctWord = words[randomIndex]
-                var displayWords = words
-                displayWords[randomIndex] = "_____"
+                // Generate 2-3 questions per verse for better coverage
+                let numQuestions = min(3, words.count - 2) // Ensure we don't exceed available words
+                var usedIndices: Set<Int> = []
                 
-                // Generate wrong options from other verses
-                var wrongOptions: [String] = []
-                for otherVerse in verses where otherVerse.number != verse.number {
-                    let otherWords = otherVerse.text.components(separatedBy: " ")
-                    if let randomWord = otherWords.randomElement() {
-                        if randomWord != correctWord && !wrongOptions.contains(randomWord) {
-                            wrongOptions.append(randomWord)
+                for _ in 0..<numQuestions {
+                    // Find an unused index
+                    var randomIndex: Int
+                    repeat {
+                        randomIndex = Int.random(in: 0..<words.count)
+                    } while usedIndices.contains(randomIndex) && usedIndices.count < words.count
+                    
+                    usedIndices.insert(randomIndex)
+                    let correctWord = words[randomIndex]
+                    var displayWords = words
+                    displayWords[randomIndex] = "_____"
+                    
+                    // Generate wrong options from other verses
+                    var wrongOptions: [String] = []
+                    for otherVerse in verses where otherVerse.number != verse.number {
+                        let otherWords = otherVerse.text.components(separatedBy: " ")
+                        if let randomWord = otherWords.randomElement() {
+                            if randomWord != correctWord && !wrongOptions.contains(randomWord) {
+                                wrongOptions.append(randomWord)
+                            }
                         }
                     }
-                }
-                
-                // Add contextually similar words as additional wrong options
-                let similarWords = ["the", "his", "her", "their", "our", "my", "your", "its", "this", "that", "these", "those", "a", "an", "some", "any", "all", "each", "every", "many", "few", "several", "both", "either", "neither"]
-                for word in similarWords.shuffled() {
-                    if word != correctWord && !wrongOptions.contains(word) && wrongOptions.count < 3 {
-                        wrongOptions.append(word)
-                    }
-                }
-                
-                // Ensure we have exactly 3 unique wrong options
-                while wrongOptions.count < 3 {
-                    let fallbackWords = ["and", "of", "in", "to", "for", "with", "by", "from", "is", "are", "was", "were", "be", "been", "have", "has", "had"]
-                    for word in fallbackWords.shuffled() {
+                    
+                    // Add contextually similar words as additional wrong options
+                    let similarWords = ["the", "his", "her", "their", "our", "my", "your", "its", "this", "that", "these", "those", "a", "an", "some", "any", "all", "each", "every", "many", "few", "several", "both", "either", "neither"]
+                    for word in similarWords.shuffled() {
                         if word != correctWord && !wrongOptions.contains(word) && wrongOptions.count < 3 {
                             wrongOptions.append(word)
+                        }
+                    }
+                    
+                    // Ensure we have exactly 3 unique wrong options
+                    while wrongOptions.count < 3 {
+                        let fallbackWords = ["and", "of", "in", "to", "for", "with", "by", "from", "is", "are", "was", "were", "be", "been", "have", "has", "had"]
+                        for word in fallbackWords.shuffled() {
+                            if word != correctWord && !wrongOptions.contains(word) && wrongOptions.count < 3 {
+                                wrongOptions.append(word)
+                                break
+                            }
+                        }
+                        // Prevent infinite loop
+                        if wrongOptions.count < 3 {
+                            wrongOptions.append("the")
                             break
                         }
                     }
-                    // Prevent infinite loop
-                    if wrongOptions.count < 3 {
-                        wrongOptions.append("the")
-                        break
-                    }
+                    
+                    let options = [correctWord] + wrongOptions
+                    
+                    let question = QuizQuestion(
+                        type: .fillInTheBlank,
+                        question: "Complete the verse: \(displayWords.joined(separator: " "))",
+                        correctAnswer: correctWord,
+                        options: options.shuffled(),
+                        verseNumber: verse.number
+                    )
+                    questions.append(question)
                 }
-                
-                let options = [correctWord] + wrongOptions
-                
-                let question = QuizQuestion(
-                    type: .fillInTheBlank,
-                    question: "Complete the verse: \(displayWords.joined(separator: " "))",
-                    correctAnswer: correctWord,
-                    options: options.shuffled(),
-                    verseNumber: verse.number
-                )
-                questions.append(question)
             }
         }
         
@@ -703,17 +730,37 @@ struct PsalmQuizView: View {
         for verse in verses {
             let words = verse.text.components(separatedBy: " ")
             if words.count > 4 {
-                // Use original words without numbering for more flexible validation
-                let shuffledWords = words.shuffled()
+                // Generate 2-3 different word order questions per verse
+                let numQuestions = min(3, max(2, words.count / 3)) // 2-3 questions based on verse length
                 
-                let question = QuizQuestion(
-                    type: .wordOrder,
-                    question: "Arrange these words in the correct order for verse \(verse.number):",
-                    correctAnswer: words.joined(separator: " "),
-                    options: shuffledWords,
-                    verseNumber: verse.number
-                )
-                questions.append(question)
+                for i in 0..<numQuestions {
+                    // Create different shuffling patterns for variety
+                    let shuffledWords: [String]
+                    if i == 0 {
+                        // First question: completely shuffled
+                        shuffledWords = words.shuffled()
+                    } else if i == 1 && words.count > 6 {
+                        // Second question: partially shuffled (keep first and last words in place)
+                        var partiallyShuffled = words
+                        let middleWords = Array(words[1..<words.count-1]).shuffled()
+                        for (index, word) in middleWords.enumerated() {
+                            partiallyShuffled[index + 1] = word
+                        }
+                        shuffledWords = partiallyShuffled
+                    } else {
+                        // Third question: reverse order
+                        shuffledWords = words.reversed()
+                    }
+                    
+                    let question = QuizQuestion(
+                        type: .wordOrder,
+                        question: "Arrange these words in the correct order for verse \(verse.number):",
+                        correctAnswer: words.joined(separator: " "),
+                        options: shuffledWords,
+                        verseNumber: verse.number
+                    )
+                    questions.append(question)
+                }
             }
         }
         
@@ -726,36 +773,52 @@ struct PsalmQuizView: View {
         for verse in verses {
             let words = verse.text.components(separatedBy: " ")
             if words.count > 5 {
-                let halfLength = words.count / 2
-                let firstHalf = words[0..<halfLength].joined(separator: " ")
-                let secondHalf = words[halfLength...].joined(separator: " ")
+                // Generate 2-3 different completion questions per verse
+                let numQuestions = min(3, max(2, words.count / 4)) // 2-3 questions based on verse length
                 
-                // Generate plausible wrong options
-                let wrongOptions = generateVerseCompletionWrongOptions(for: verse, correctAnswer: secondHalf)
-                
-                // Ensure the correct answer is always included
-                var allOptions = [secondHalf]
-                allOptions.append(contentsOf: wrongOptions)
-                
-                // Remove duplicates and ensure we have the correct answer
-                let uniqueOptions = Array(Set(allOptions))
-                
-                // Ensure we have at least 4 unique options including the correct answer
-                if uniqueOptions.count >= 4 && uniqueOptions.contains(secondHalf) {
-                    // Take the correct answer plus 3 wrong options
-                    let correctAnswer = secondHalf
-                    let availableWrongOptions = uniqueOptions.filter { $0 != correctAnswer }
-                    let selectedWrongOptions = Array(availableWrongOptions.prefix(3))
-                    let finalOptions = [correctAnswer] + selectedWrongOptions
+                for i in 0..<numQuestions {
+                    let splitPoint: Int
+                    if i == 0 {
+                        // First question: split at halfway point
+                        splitPoint = words.count / 2
+                    } else if i == 1 {
+                        // Second question: split at 1/3 point
+                        splitPoint = words.count / 3
+                    } else {
+                        // Third question: split at 2/3 point
+                        splitPoint = (words.count * 2) / 3
+                    }
                     
-                    let question = QuizQuestion(
-                        type: .verseCompletion,
-                        question: "Complete verse \(verse.number): \(firstHalf) _____",
-                        correctAnswer: correctAnswer,
-                        options: finalOptions.shuffled(),
-                        verseNumber: verse.number
-                    )
-                    questions.append(question)
+                    let firstHalf = words[0..<splitPoint].joined(separator: " ")
+                    let secondHalf = words[splitPoint...].joined(separator: " ")
+                    
+                    // Generate plausible wrong options
+                    let wrongOptions = generateVerseCompletionWrongOptions(for: verse, correctAnswer: secondHalf)
+                    
+                    // Ensure the correct answer is always included
+                    var allOptions = [secondHalf]
+                    allOptions.append(contentsOf: wrongOptions)
+                    
+                    // Remove duplicates and ensure we have the correct answer
+                    let uniqueOptions = Array(Set(allOptions))
+                    
+                    // Ensure we have at least 4 unique options including the correct answer
+                    if uniqueOptions.count >= 4 && uniqueOptions.contains(secondHalf) {
+                        // Take the correct answer plus 3 wrong options
+                        let correctAnswer = secondHalf
+                        let availableWrongOptions = uniqueOptions.filter { $0 != correctAnswer }
+                        let selectedWrongOptions = Array(availableWrongOptions.prefix(3))
+                        let finalOptions = [correctAnswer] + selectedWrongOptions
+                        
+                        let question = QuizQuestion(
+                            type: .verseCompletion,
+                            question: "Complete verse \(verse.number): \(firstHalf) _____",
+                            correctAnswer: correctAnswer,
+                            options: finalOptions.shuffled(),
+                            verseNumber: verse.number
+                        )
+                        questions.append(question)
+                    }
                 }
             }
         }
@@ -819,10 +882,26 @@ struct PsalmQuizView: View {
         let verseCompletionQuestions = generateVerseCompletionQuestions()
         
         var allQuestions: [QuizQuestion] = []
-        allQuestions.append(contentsOf: fillInQuestions.prefix(3))
-        allQuestions.append(contentsOf: multipleChoiceQuestions.prefix(3))
-        allQuestions.append(contentsOf: wordOrderQuestions.prefix(2))
-        allQuestions.append(contentsOf: verseCompletionQuestions.prefix(2))
+        
+        // Include more questions from each type for a comprehensive mixed quiz
+        allQuestions.append(contentsOf: fillInQuestions.prefix(5))        // Up to 5 fill-in-the-blank
+        allQuestions.append(contentsOf: multipleChoiceQuestions.prefix(5)) // Up to 5 multiple choice
+        allQuestions.append(contentsOf: wordOrderQuestions.prefix(4))      // Up to 4 word order
+        allQuestions.append(contentsOf: verseCompletionQuestions.prefix(4)) // Up to 4 verse completion
+        
+        // Ensure we have a minimum number of questions
+        if allQuestions.count < 8 {
+            // If we don't have enough questions, try to get more from available types
+            let remainingFillIn = fillInQuestions.dropFirst(5)
+            let remainingMultiple = multipleChoiceQuestions.dropFirst(5)
+            let remainingWordOrder = wordOrderQuestions.dropFirst(4)
+            let remainingCompletion = verseCompletionQuestions.dropFirst(4)
+            
+            allQuestions.append(contentsOf: remainingFillIn.prefix(3))
+            allQuestions.append(contentsOf: remainingMultiple.prefix(3))
+            allQuestions.append(contentsOf: remainingWordOrder.prefix(2))
+            allQuestions.append(contentsOf: remainingCompletion.prefix(2))
+        }
         
         return allQuestions
     }
