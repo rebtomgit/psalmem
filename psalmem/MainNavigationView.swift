@@ -55,8 +55,8 @@ struct MainNavigationView: View {
         }
         .sheet(isPresented: $showingDiagnostics) {
             DiagnosticView()
-                .frame(minWidth: 600, minHeight: 800)
-                .presentationDetents([.large, .height(1000)])
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
     }

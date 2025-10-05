@@ -243,37 +243,35 @@ struct DiagnosticView: View {
     
     var body: some View {
         NavigationView {
-            GeometryReader { geometry in
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Header
-                        headerSection
-                        
-                        // Progress Overview
-                        progressOverviewSection
-                        
-                        // User Progress Details
-                        userProgressSection
-                        
-                        // Quiz Performance
-                        quizPerformanceSection
-                        
-                        // Diagnostic Tools
-                        diagnosticToolsSection
-                        
-                        // Extra padding at bottom to ensure all content is accessible
-                        Spacer(minLength: 50)
-                    }
-                    .padding()
-                    .frame(minHeight: geometry.size.height)
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Header
+                    headerSection
+                    
+                    // Progress Overview
+                    progressOverviewSection
+                    
+                    // User Progress Details
+                    userProgressSection
+                    
+                    // Quiz Performance
+                    quizPerformanceSection
+                    
+                    // Diagnostic Tools
+                    diagnosticToolsSection
+                    
+                    // Extra padding at bottom to ensure all content is accessible
+                    Spacer(minLength: 50)
                 }
-                .scrollIndicators(.visible)
+                .padding()
             }
+            .scrollIndicators(.visible)
             .navigationTitle("Diagnostics & Progress")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sheet(isPresented: $showingLogViewer) {
             LogViewerView(logContents: logContents)
         }
