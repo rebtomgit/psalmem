@@ -1227,93 +1227,95 @@ struct WordOrderQuizView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Main content area - always visible
-            ScrollView {
-                VStack(spacing: 6) {
-                    selectedWordsSection
-                    availableWordsSection
-                    actionButtonsSection
-                    
-                    // Extra padding to ensure submit button is visible
-                    Spacer(minLength: 20)
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                // Main content area with proper height constraints
+                ScrollView {
+                    VStack(spacing: 6) {
+                        selectedWordsSection
+                        availableWordsSection
+                        actionButtonsSection
+                        
+                        // Extra padding to ensure submit button is visible
+                        Spacer(minLength: 20)
+                    }
+                    .padding(.vertical, 4)
+                    .padding(.bottom, 8)
                 }
-                .padding(.vertical, 4)
-                .padding(.bottom, 8)
-            }
-            .frame(maxHeight: showingResult ? .infinity : .infinity)
-            
-            // Always visible submit button section
-            VStack(spacing: 8) {
-                Divider()
+                .frame(maxHeight: showingResult ? geometry.size.height * 0.6 : geometry.size.height * 0.8)
                 
-                Button("Check Answer") {
-                    let userAnswer = selectedWords.map { $0.word }.joined(separator: " ")
-                    let isCorrect = validateWordOrderAnswer(userAnswer: userAnswer, correctAnswer: question.correctAnswer)
-                    showingResult = true
-                    self.isCorrect = isCorrect
-                }
-                .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity)
-                .disabled(selectedWords.isEmpty)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 8)
-            }
-            .background(Color(.systemBackground))
-            
-            // Feedback section - only appears when needed
-            if showingResult {
-                VStack(spacing: 12) {
-                    HStack {
-                        Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundColor(isCorrect ? .green : .red)
-                            .font(.title2)
-                        
-                        Text(isCorrect ? "Correct!" : "Incorrect")
-                            .font(.headline)
-                            .foregroundColor(isCorrect ? .green : .red)
-                        
-                        Spacer()
-                    }
+                // Always visible submit button section
+                VStack(spacing: 8) {
+                    Divider()
                     
-                    if !isCorrect {
-                        Text("The correct order was:")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        ScrollView {
-                            Text(question.correctAnswer)
-                                .font(.body)
-                                .fontWeight(.medium)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .frame(maxWidth: .infinity)
-                                .background(Color.green.opacity(0.1))
-                                .cornerRadius(8)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.green.opacity(0.3), lineWidth: 1)
-                                )
-                        }
-                        .frame(maxHeight: 100)
-                    }
-                    
-                    Button("Continue") {
-                        showingResult = false
-                        onAnswer(isCorrect)
+                    Button("Check Answer") {
+                        let userAnswer = selectedWords.map { $0.word }.joined(separator: " ")
+                        let isCorrect = validateWordOrderAnswer(userAnswer: userAnswer, correctAnswer: question.correctAnswer)
+                        showingResult = true
+                        self.isCorrect = isCorrect
                     }
                     .buttonStyle(.borderedProminent)
                     .frame(maxWidth: .infinity)
+                    .disabled(selectedWords.isEmpty)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
                 }
-                .padding()
                 .background(Color(.systemBackground))
-                .cornerRadius(12)
-                .shadow(radius: 10)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 20)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.easeInOut(duration: 0.3), value: showingResult)
+            
+                // Feedback section - only appears when needed
+                if showingResult {
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            HStack {
+                                Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                    .foregroundColor(isCorrect ? .green : .red)
+                                    .font(.title2)
+                                
+                                Text(isCorrect ? "Correct!" : "Incorrect")
+                                    .font(.headline)
+                                    .foregroundColor(isCorrect ? .green : .red)
+                                
+                                Spacer()
+                            }
+                            
+                            if !isCorrect {
+                                Text("The correct order was:")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                
+                                Text(question.correctAnswer)
+                                    .font(.body)
+                                    .fontWeight(.medium)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.green.opacity(0.1))
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                                    )
+                            }
+                            
+                            Button("Continue") {
+                                showingResult = false
+                                onAnswer(isCorrect)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .frame(maxWidth: .infinity)
+                        }
+                        .padding()
+                        .background(Color(.systemBackground))
+                        .cornerRadius(12)
+                        .shadow(radius: 10)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 20)
+                    }
+                    .frame(maxHeight: geometry.size.height * 0.4)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.3), value: showingResult)
+                }
             }
         }
         .onAppear {
