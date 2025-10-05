@@ -208,6 +208,7 @@ enum LogLevel: String {
 
 struct DiagnosticView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Query private var allProgress: [Progress]
     @Query private var allUsers: [User]
     @Query private var allPsalms: [Psalm]
@@ -242,9 +243,26 @@ struct DiagnosticView: View {
     }
     
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            // Header with close button
+            HStack {
+                Text("Diagnostics & Progress")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Spacer()
+                Button("Done") {
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(.systemBackground))
+            .shadow(radius: 1)
+            
+            // Main content
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 8) {
                     // Progress Overview
                     progressOverviewSection
                     
@@ -258,19 +276,16 @@ struct DiagnosticView: View {
                     diagnosticToolsSection
                     
                     // Extra padding at bottom to ensure all content is accessible
-                    Spacer(minLength: 30)
+                    Spacer(minLength: 10)
                 }
-                .padding(.horizontal)
-                .padding(.top, 8)
-                .padding(.bottom, 20)
+                .padding(.horizontal, 8)
+                .padding(.top, 4)
+                .padding(.bottom, 10)
             }
             .scrollIndicators(.visible)
-            .navigationTitle("Diagnostics & Progress")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
         .sheet(isPresented: $showingLogViewer) {
             LogViewerView(logContents: logContents)
         }
@@ -295,13 +310,13 @@ struct DiagnosticView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .padding(12)
+        .padding(8)
         .background(Color.blue.opacity(0.1))
         .cornerRadius(12)
     }
     
     private var progressOverviewSection: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        VStack(alignment: .leading, spacing: 8) {
             // Compact user info header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -355,14 +370,14 @@ struct DiagnosticView: View {
                 )
             }
         }
-        .padding(12)
+        .padding(8)
         .background(Color.white)
         .cornerRadius(12)
         .shadow(radius: 2)
     }
     
     private var userProgressSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("User Progress Details")
                 .font(.title2)
                 .fontWeight(.bold)
@@ -382,14 +397,14 @@ struct DiagnosticView: View {
                 }
             }
         }
-        .padding(12)
+        .padding(8)
         .background(Color.white)
         .cornerRadius(12)
         .shadow(radius: 2)
     }
     
     private var quizPerformanceSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Quiz Performance")
                 .font(.title2)
                 .fontWeight(.bold)
@@ -428,14 +443,14 @@ struct DiagnosticView: View {
                 }
             }
         }
-        .padding(12)
+        .padding(8)
         .background(Color.white)
         .cornerRadius(12)
         .shadow(radius: 2)
     }
     
     private var diagnosticToolsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Diagnostic Tools")
                 .font(.title2)
                 .fontWeight(.bold)
@@ -469,7 +484,7 @@ struct DiagnosticView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .padding(12)
+        .padding(8)
         .background(Color.white)
         .cornerRadius(12)
         .shadow(radius: 2)
